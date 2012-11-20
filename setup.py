@@ -123,8 +123,8 @@ setup(
     description="A pythonic layer on top of the "
     "ROOT framework's PyROOT bindings.",
     long_description=open('README.rst').read(),
-    author='Noel Dawe',
-    author_email='noel.dawe@cern.ch',
+    author='The rootpy Developers',
+    author_email='rootpy-dev@googlegroups.com',
     license='GPLv3',
     url=__url__,
     download_url=__download_url__,
