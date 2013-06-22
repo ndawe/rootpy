@@ -4,6 +4,7 @@ from .. import log; log = log[__name__]
 from . import quickroot as QROOT
 from urllib2 import urlopen
 import xml.dom.minidom as minidom
+import re
 
 
 def iter_ROOT_classes():
@@ -49,3 +50,16 @@ def print_table(table, sep='  '):
     # Print each row using the computed format
     for row in table:
         print format % tuple(row)
+
+
+FIRST_CAP_RE = re.compile('(.)([A-Z][a-z]+)')
+ALL_CAP_RE = re.compile('([a-z0-9])([A-Z])')
+
+
+def camel_to_snake(name):
+    """
+    http://stackoverflow.com/questions/1175208/
+    elegant-python-function-to-convert-camelcase-to-camel-case
+    """
+    s1 = FIRST_CAP_RE.sub(r'\1_\2', name)
+    return ALL_CAP_RE.sub(r'\1_\2', s1).lower()
