@@ -9,6 +9,7 @@ import inspect
 import warnings
 from .context import preserve_current_directory
 from .extern import decorator
+from .util.extras import camel_to_snake
 from . import gDirectory, ROOT_VERSION
 
 
@@ -95,19 +96,6 @@ def chainable(f, self, *args, **kwargs):
     f(self, *args, **kwargs)
     # return reference to class.
     return self
-
-
-FIRST_CAP_RE = re.compile('(.)([A-Z][a-z]+)')
-ALL_CAP_RE = re.compile('([a-z0-9])([A-Z])')
-
-
-def camel_to_snake(name):
-    """
-    http://stackoverflow.com/questions/1175208/
-    elegant-python-function-to-convert-camelcase-to-camel-case
-    """
-    s1 = FIRST_CAP_RE.sub(r'\1_\2', name)
-    return ALL_CAP_RE.sub(r'\1_\2', s1).lower()
 
 
 def snake_case_methods(cls, debug=False):

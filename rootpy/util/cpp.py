@@ -17,9 +17,9 @@ class CPPGrammar(object):
         QuotedString('"', escChar='\\') | Literal('""') |
         QuotedString("'", escChar='\\') | Literal("''"))
 
-    PTR = Combine(OneOrMore(Word("*") | Word("&")), adjacent=False)
+    PTR = Combine(OneOrMore(Word('*') | Word('&')), adjacent=False)
     SIGN = Optional(Literal('+') | Literal('-'))
-    CONST = Keyword("const")
+    CONST = Keyword('const')
     SIGNED = Optional(Keyword('signed') | Keyword('unsigned'))
     STATIC = Keyword('static')
     VOID = Combine(Literal('void') + Optional(PTR), adjacent=False)
@@ -34,20 +34,20 @@ class CPPGrammar(object):
         Keyword('float') |
         (Optional('long') + Keyword('double')))('type_name')
 
-    IDENTIFIER = Word(alphas + "_", alphanums + "_").setName("identifier")
+    IDENTIFIER = Word(alphas + '_', alphanums + '_').setName('identifier')
 
-    hexnums = nums + "abcdefABCDEF" + "_?"
-    base = Regex("'[bBoOdDhH]").setName("base")
+    hexnums = nums + 'abcdefABCDEF' + '_?'
+    base = Regex("'[bBoOdDhH]").setName('base')
     BASEDNUMBER = Combine(
-        Optional(Word(nums + "_")) + base +
-        Word(hexnums + "xXzZ"),
-        joinString=" ", adjacent=False).setName("based number")
+        Optional(Word(nums + '_')) + base +
+        Word(hexnums + 'xXzZ'),
+        joinString=' ', adjacent=False).setName('based number')
     NUMBER = (
         BASEDNUMBER |
-        Regex(r"[-+]?([0-9]*\.[0-9]+|[0-9]+\.?)([Ee][-+]?[0-9]+)?")
+        Regex(r'[-+]?([0-9]*\.[0-9]+|[0-9]+\.?)([Ee][-+]?[0-9]+)?')
         ).setName("numeric")
 
-    ARITH_OPERATOR = Word("*/+-").setName('arith op')
+    ARITH_OPERATOR = Word('*/+-').setName('arith op')
     BIT_OPERATOR = Word('&|').setName('bit op')
     BIT_EXPRESSION = (IDENTIFIER +
         OneOrMore(BIT_OPERATOR + IDENTIFIER)).setName('bit_expression')
@@ -64,12 +64,12 @@ class CPPGrammar(object):
 
     TEMPLATE_PARAMS = (
         Literal("<").suppress() +
-        Group(delimitedList(TYPE | FULL_EXPRESSION))("template_params") +
+        Group(delimitedList(TYPE | FULL_EXPRESSION))('template_params') +
         Literal(">").suppress())
 
     CLASS_MEMBER = (
         Literal('::').suppress() +
-        NAMESPACED_NAME)("template_member")
+        NAMESPACED_NAME)('template_member')
 
     COMPLEX_TYPE = (
         Group(NAMESPACED_NAME)('type_name') +
@@ -122,9 +122,9 @@ class CPPGrammar(object):
         ((VOID('return') + COMPLEX_TYPE('name')) |
          (TYPE('return') + COMPLEX_TYPE('name')) |
          COMPLEX_TYPE('name')) +
-        Literal("(").suppress() +
+        Literal('(').suppress() +
         Optional(Group(METHOD_ARGS)('args')) +
-        Literal(")").suppress())
+        Literal(')').suppress())
 
     @classmethod
     def _parse(cls, grammar, string, raise_exception=False, silent=True):
