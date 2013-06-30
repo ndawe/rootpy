@@ -1,9 +1,16 @@
 import inspect
 import re
+import os
 
 from . import log; log = log[__name__]
-from .cpp import CPPGrammar
-from .extras import camel_to_snake
+from .util.cpp import CPPGrammar
+from .util.extras import camel_to_snake
+
+__all__ = [
+    'ROOTDescriptor',
+    'ROOTStaticDescriptor',
+    'pythonize',
+]
 
 
 DESCRIPTOR_PATTERN = re.compile('^(?P<access>([sS]|[gG])et)(?P<prop>.+)$')
@@ -75,3 +82,39 @@ def autoprops(cls):
             'static ' if setter_static else '', snake_name))
         desc_cls = ROOTStaticDescriptor if setter_static else ROOTDescriptor
         setattr(cls, snake_name, desc_cls(setter, getter))
+
+
+CLASS_TEMPLATE = '''\
+from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
+from rootpy import asrootpy
+from ROOT import {0}
+
+class {1}({0}):
+{2}
+'''
+
+
+def pythonize(cls):
+    """
+    Write out a pythonized subclass of `cls` to the file `cls.__name__`.py if
+    this class has not yet been pythonized, otherwise import the existing
+    pythonized class.
+
+    Returns
+    -------
+    pythonized_cls: the pythonized class
+    """
+    cls_name = cls.__name__
+    out_name = '{0}.py'.format(cls_name)
+    subcls_name = 'pythonized_{0}'.format(cls_name)
+    if os.path.isfile(out_name):
+        # import existing file and get the class
+        log.debug(
+            "using existing pythonized subclass of `{0}`".format(cls_name))
+        from out_name import subcls_name
+        return subcls_name
+    # create new pythonized class
+    log.info("generating pythonized subclass of `{0}`".format(cls_name))
+    with open(out_name, 'w') as out_file:
+        body = ""
+        out_file.write(CLASS_TEMPLATE.format(cls_name, subcls_name, body))
