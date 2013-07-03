@@ -84,14 +84,76 @@ def autoprops(cls):
         setattr(cls, snake_name, desc_cls(setter, getter))
 
 
-CLASS_TEMPLATE = '''\
-from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
-from rootpy import asrootpy
-from ROOT import {0}
+class Argument(object):
 
-class {1}({0}):
-{2}
-'''
+    def __init__(self, name, value=None):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        if self.value is not None:
+            return '{0}={1}'.format(self.name, self.value)
+        return self.name
+
+
+class Method(object):
+
+    TEMPLATE = '''\
+    def {0}({1}):
+        {2}
+    '''
+
+    def __init__(self, name, args, body):
+        self.name = name
+        self.args = args
+        self.body = body
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return self.TEMPLATE.format(self.name,
+            ', '.join(map(str, self.args)))
+
+
+class Attribute(object):
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return '{0} = {1}'.format(self.name, self.value)
+
+
+class Class(object):
+
+    TEMPLATE = '''\
+    from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
+    from rootpy import asrootpy
+    from ROOT import {0}
+
+    class {1}({0}):
+    {2}
+    '''
+
+    def __init__(self, name, base, attrs):
+        self.name = name
+        self.base = base
+        self.attrs =  attrs
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return self.TEMPLATE.format(self.base, self.name,
+            '\n'.join(map(str, self.attrs)))
 
 
 def pythonize(cls):
@@ -116,5 +178,6 @@ def pythonize(cls):
     # create new pythonized class
     log.info("generating pythonized subclass of `{0}`".format(cls_name))
     with open(out_name, 'w') as out_file:
-        body = ""
-        out_file.write(CLASS_TEMPLATE.format(cls_name, subcls_name, body))
+        attrs = []
+        subcls_src = Class(subcls_name, cls_name, attrs)
+        out_file.write(str(subcls_src))
