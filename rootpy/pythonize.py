@@ -1,6 +1,7 @@
 import inspect
 import re
 import os
+import imp
 
 from . import log; log = log[__name__]
 from .util.cpp import CPPGrammar
@@ -135,12 +136,12 @@ class Attribute(object):
 class Class(object):
 
     TEMPLATE = '''\
-    from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
-    from rootpy import asrootpy
-    from ROOT import {0}
+from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
+from rootpy import asrootpy
+from ROOT import {0}
 
-    class {1}({0}):
-    {2}
+class {1}({0}):
+{2}
     '''
 
     def __init__(self, name, base, attrs):
@@ -168,7 +169,7 @@ def pythonize(cls):
     """
     cls_name = cls.__name__
     out_name = '{0}.py'.format(cls_name)
-    subcls_name = 'pythonized_{0}'.format(cls_name)
+    subcls_name = '{0}_pythonized'.format(cls_name)
     if os.path.isfile(out_name):
         # import existing file and get the class
         log.debug(
