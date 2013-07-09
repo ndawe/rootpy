@@ -175,15 +175,15 @@ def pythonize(cls):
     cls_name = cls.__name__
     out_name = '{0}.py'.format(cls_name)
     subcls_name = '{0}_pythonized'.format(cls_name)
-    if os.path.isfile(out_name):
-        # import existing file and get the class
-        log.debug(
-            "using existing pythonized subclass of `{0}`".format(cls_name))
-        from out_name import subcls_name
-        return subcls_name
-    # create new pythonized class
-    log.info("generating pythonized subclass of `{0}`".format(cls_name))
-    with open(out_name, 'w') as out_file:
-        subcls_src = Class(subcls_name, cls_name)
-        autoprops(cls, subcls_src)
-        out_file.write(str(subcls_src))
+    if not os.path.isfile(out_name):
+        # create new pythonized class
+        log.info("generating pythonized subclass of `{0}`".format(cls_name))
+        with open(out_name, 'w') as out_file:
+            subcls_src = Class(subcls_name, cls_name)
+            autoprops(cls, subcls_src)
+            out_file.write(str(subcls_src))
+    # import existing file and get the class
+    log.debug(
+        "using existing pythonized subclass of `{0}`".format(cls_name))
+    modhandle = imp.load_source('ROOT_pythonized', out_name)
+    return getattr(modhandle, subcls_name)
