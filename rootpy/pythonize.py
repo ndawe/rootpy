@@ -44,7 +44,7 @@ class ROOTStaticDescriptor(ROOTDescriptor):
         self.root_setter(value)
 
 
-def autoprops(cls):
+def autoprops(cls, cls_proxy):
 
     setters = dict()
     getters = dict()
@@ -81,8 +81,12 @@ def autoprops(cls):
         snake_name = camel_to_snake(name)
         log.debug('creating {0}descriptor `{1}`'.format(
             'static ' if setter_static else '', snake_name))
-        desc_cls = ROOTStaticDescriptor if setter_static else ROOTDescriptor
-        setattr(cls, snake_name, desc_cls(setter, getter))
+        desc_cls = 'ROOTStaticDescriptor' if setter_static else 'ROOTDescriptor'
+        cls_proxy.attrs.append(
+            Attribute(
+                snake_name,
+                '{0}(ROOT_CLS.{1}, ROOT_CLS.{2})'.format(
+                    desc_cls, setter.__name__, getter.__name__)))
 
 
 class Argument(object):
@@ -130,24 +134,25 @@ class Attribute(object):
         return self.__str__()
 
     def __str__(self):
-        return '{0} = {1}'.format(self.name, self.value)
+        return '    {0} = {1}'.format(self.name, self.value)
 
 
 class Class(object):
 
     TEMPLATE = '''\
-from rootpy.pythonized import ROOTDescriptor, ROOTStaticDescriptor
-from rootpy import asrootpy
-from ROOT import {0}
+from rootpy.pythonize import ROOTDescriptor, ROOTStaticDescriptor
+from rootpy import asrootpy, QROOT
 
-class {1}({0}):
+ROOT_CLS = QROOT.{0}
+
+class {1}(ROOT_CLS):
 {2}
     '''
 
-    def __init__(self, name, base, attrs):
+    def __init__(self, name, base):
         self.name = name
         self.base = base
-        self.attrs =  attrs
+        self.attrs = []
 
     def __repr__(self):
         return self.__str__()
@@ -179,6 +184,6 @@ def pythonize(cls):
     # create new pythonized class
     log.info("generating pythonized subclass of `{0}`".format(cls_name))
     with open(out_name, 'w') as out_file:
-        attrs = []
-        subcls_src = Class(subcls_name, cls_name, attrs)
+        subcls_src = Class(subcls_name, cls_name)
+        autoprops(cls, subcls_src)
         out_file.write(str(subcls_src))
