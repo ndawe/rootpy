@@ -2,19 +2,26 @@ import inspect
 import re
 import os
 import imp
+import keyword
 
 from . import log; log = log[__name__]
 from .util.cpp import CPPGrammar
 from .util.extras import camel_to_snake
+from . import userdata
+
 
 __all__ = [
     'ROOTDescriptor',
     'ROOTStaticDescriptor',
-    'pythonize',
+    'pythonized',
 ]
 
 
 DESCRIPTOR_PATTERN = re.compile('^(?P<access>([sS]|[gG])et)(?P<prop>.+)$')
+CONVERT_SNAKE_CASE = os.getenv('NO_ROOTPY_SNAKE_CASE', False) == False
+SOURCE_PATH = os.path.join(userdata.BINARY_PATH, 'source')
+if not os.path.exists(SOURCE_PATH):
+    os.makedirs(SOURCE_PATH)
 
 
 class ROOTDescriptor(object):
@@ -44,13 +51,52 @@ class ROOTStaticDescriptor(ROOTDescriptor):
         self.root_setter(value)
 
 
-def autoprops(cls, cls_proxy):
+def snake_case_methods(cls, methods, cls_proxy):
+    """
+    A class decorator adding snake_case methods
+    that alias capitalized ROOT methods
+    """
+    if not CONVERT_SNAKE_CASE:
+        return
+    llog = log['snake_case_methods']
+    # filter out any methods that already exist in lower and uppercase forms
+    # i.e. TDirectory::cd and Cd...
+    names = [name.capitalize() for (name, method) in methods]
+    duplicate_idx = set()
+    seen = []
+    for i, n in enumerate(names):
+        try:
+            idx = seen.index(n)
+            duplicate_idx.add(i)
+            duplicate_idx.add(idx)
+        except ValueError:
+            seen.append(n)
+    for i, (name, method) in enumerate(methods):
+        if i in duplicate_idx:
+            continue
+        # Don't touch special methods or methods without cap letters
+        if name[0] == '_' or name.islower():
+            continue
+        # convert CamelCase to snake_case
+        snake_name = camel_to_snake(name)
+        llog.debug("{0} -> {1}".format(name, snake_name))
+        if hasattr(cls, snake_name):
+            llog.warning("{0} is already a member of {1}".format(
+                snake_name, cls.__name__))
+            continue
+        if keyword.iskeyword(snake_name):
+            llog.warning("{0} is a python keyword".format(snake_name))
+            continue
+        cls_proxy.attrs.append(
+            Attribute(snake_name, 'ROOT_CLS.{0}'.format(method.__name__)))
 
+
+def descriptors(cls, methods, cls_proxy):
+
+    llog = log['descriptors']
     setters = dict()
     getters = dict()
-    for name, thing in inspect.getmembers(cls):
-        if not inspect.ismethod(thing):
-            continue
+    for name, thing in methods:
         desc_match = re.match(DESCRIPTOR_PATTERN, name)
         if not desc_match:
             continue
@@ -76,11 +122,18 @@ def autoprops(cls, cls_proxy):
         setter, setter_static = setters[name]
         getter, getter_static = getters[name]
         if setter_static != getter_static:
-            log.warning("only one of Set{0} and Get{0} is static".format(name))
+            llog.warning("only one of Set{0} and Get{0} is static".format(name))
             continue
         snake_name = camel_to_snake(name)
-        log.debug('creating {0}descriptor `{1}`'.format(
+        llog.debug('creating {0}descriptor `{1}`'.format(
             'static ' if setter_static else '', snake_name))
+        if hasattr(cls, snake_name):
+            llog.warning("{0} is already a member of {1}".format(
+                snake_name, cls.__name__))
+            continue
+        if keyword.iskeyword(snake_name):
+            llog.warning("{0} is a python keyword".format(snake_name))
+            continue
         desc_cls = 'ROOTStaticDescriptor' if setter_static else 'ROOTDescriptor'
         cls_proxy.attrs.append(
             Attribute(
@@ -162,7 +215,7 @@ class {1}(ROOT_CLS):
             '\n'.join(map(str, self.attrs)))
 
 
-def pythonize(cls):
+def pythonized(cls):
     """
     Write out a pythonized subclass of `cls` to the file `cls.__name__`.py if
     this class has not yet been pythonized, otherwise import the existing
@@ -173,14 +226,16 @@ def pythonize(cls):
     pythonized_cls: the pythonized class
     """
     cls_name = cls.__name__
-    out_name = '{0}.py'.format(cls_name)
+    out_name = os.path.join(SOURCE_PATH, '{0}.py'.format(cls_name))
     subcls_name = '{0}_pythonized'.format(cls_name)
     if not os.path.isfile(out_name):
         # create new pythonized class
         log.info("generating pythonized subclass of `{0}`".format(cls_name))
         with open(out_name, 'w') as out_file:
             subcls_src = Class(subcls_name, cls_name)
-            autoprops(cls, subcls_src)
+            methods = inspect.getmembers(cls, predicate=inspect.ismethod)
+            descriptors(cls, methods, subcls_src)
+            snake_case_methods(cls, methods, subcls_src)
             out_file.write(str(subcls_src))
     # import existing file and get the class
     log.debug(

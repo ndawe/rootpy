@@ -58,11 +58,10 @@ if DATA_ROOT is None:
         import shutil
         shutil.rmtree(DATA_ROOT)
 
-BINARY_PATH = None
-
 ARCH = "{0}-{1}".format(machine(), QROOT.gROOT.GetVersionInt())
-if BINARY_PATH is None:
-    BINARY_PATH = pjoin(DATA_ROOT, ARCH)
+BINARY_PATH = pjoin(DATA_ROOT, ARCH)
+if not exists(BINARY_PATH):
+    os.makedirs(BINARY_PATH)
 
 @extra_initialization
 def show_binary_path():

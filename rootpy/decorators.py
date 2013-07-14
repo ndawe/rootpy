@@ -9,11 +9,7 @@ import inspect
 import warnings
 from .context import preserve_current_directory
 from .extern import decorator
-from .util.extras import camel_to_snake
 from . import gDirectory, ROOT_VERSION
-
-
-CONVERT_SNAKE_CASE = os.getenv('NO_ROOTPY_SNAKE_CASE', False) == False
 
 
 def requires_ROOT(version, exception=False):
@@ -96,62 +92,3 @@ def chainable(f, self, *args, **kwargs):
     f(self, *args, **kwargs)
     # return reference to class.
     return self
-
-
-def snake_case_methods(cls, debug=False):
-    """
-    A class decorator adding snake_case methods
-    that alias capitalized ROOT methods
-    """
-    if not CONVERT_SNAKE_CASE:
-        return cls
-    # Fix both the class and its corresponding ROOT base class
-    #TODO use the class property on Object
-    root_base = cls.__bases__[-1]
-    members = inspect.getmembers(root_base)
-    # filter out any methods that already exist in lower and uppercase forms
-    # i.e. TDirectory::cd and Cd...
-    names = [item[0].capitalize() for item in members]
-    duplicate_idx = set()
-    seen = []
-    for i, n in enumerate(names):
-        try:
-            idx = seen.index(n)
-            duplicate_idx.add(i)
-            duplicate_idx.add(idx)
-        except ValueError:
-            seen.append(n)
-    
-    for i, (name, member) in enumerate(members):
-        if i in duplicate_idx:
-            continue
-        # Don't touch special methods or methods without cap letters
-        if name[0] == '_' or name.islower():
-            continue
-        # Is this a method of the ROOT base class?
-        if inspect.ismethod(member) or inspect.isfunction(member):
-            # convert CamelCase to snake_case
-            new_name = camel_to_snake(name)
-            if debug:
-                print "%s -> %s" % (name, new_name)
-                if hasattr(cls, new_name):
-                    raise ValueError(
-                            '%s is already a method for %s' %
-                            (new_name, cls.__name__))
-            
-            # Use a __dict__ lookup rather than getattr because we _want_ to
-            # obtain the _descriptor_, and not what the descriptor gives us when
-            # it is `getattr`'d.
-            value = None
-            for c in cls.mro():
-                if name in c.__dict__:
-                    value = c.__dict__[name]
-                    break
-            # <neo>Woah, a use for for-else</neo>
-            else:
-                # Weird. Maybe the item lives somewhere else, such as on the
-                # metaclass?
-                value = getattr(cls, name)
-            
-            setattr(cls, new_name, value)
-    return cls
