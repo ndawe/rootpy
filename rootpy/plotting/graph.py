@@ -7,14 +7,13 @@ from operator import add, sub
 import ROOT
 
 from .. import log; log = log[__name__]
+from ..pythonize import pythonized
 from .. import QROOT
 from ..core import NamelessConstructorObject, isbasictype
-from ..decorators import snake_case_methods
 from .core import Plottable
 
 
-@snake_case_methods
-class Graph(Plottable, NamelessConstructorObject, QROOT.TGraphAsymmErrors):
+class Graph(Plottable, NamelessConstructorObject, pythonized(QROOT.TGraphAsymmErrors)):
 
     DIM = 1
 
@@ -543,8 +542,7 @@ class Graph(Plottable, NamelessConstructorObject, QROOT.TGraphAsymmErrors):
         return area
 
 
-@snake_case_methods
-class Graph2D(Plottable, NamelessConstructorObject, QROOT.TGraph2D):
+class Graph2D(Plottable, NamelessConstructorObject, pythonized(QROOT.TGraph2D)):
 
     DIM = 2
 

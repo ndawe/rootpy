@@ -6,8 +6,8 @@ from itertools import product
 import ROOT
 
 from .. import asrootpy, QROOT, log; log = log[__name__]
+from ..pythonize import pythonized
 from ..core import NamedObject, isbasictype
-from ..decorators import snake_case_methods
 from .core import Plottable, dim
 from ..context import invisible_canvas
 from ..objectproxy import ObjectProxy
@@ -27,6 +27,7 @@ __all__ = [
 
 class DomainError(Exception):
     pass
+
 
 class BinProxy(object):
 
@@ -79,7 +80,12 @@ class BinProxy(object):
         self.value *= v
         self.error *= v
 
+
 class _HistBase(Plottable, NamedObject):
+
+    TYPES = dict((c, [pythonized(getattr(QROOT, "TH{0}{1}".format(d, c)))
+                      for d in (1, 2, 3)])
+                 for c in "CSIFD")
 
     def xyz(self, i):
         x, y, z = ROOT.Long(0), ROOT.Long(0), ROOT.Long(0)
@@ -101,10 +107,6 @@ class _HistBase(Plottable, NamedObject):
             if not overflow and bproxy.overflow:
                 continue
             yield bproxy
-
-    TYPES = dict((c, [getattr(QROOT, "TH{0}{1}".format(d, c))
-                      for d in (1, 2, 3)])
-                 for c in "CSIFD")
 
     def _parse_args(self, args, ignore_extras=False):
 
@@ -1128,17 +1130,9 @@ _HIST_CLASSES_2D = {}
 _HIST_CLASSES_3D = {}
 
 for bintype in _HistBase.TYPES.keys():
-    cls = _Hist_class(type=bintype)
-    snake_case_methods(cls)
-    _HIST_CLASSES_1D[bintype] = cls
-
-    cls = _Hist2D_class(type=bintype)
-    snake_case_methods(cls)
-    _HIST_CLASSES_2D[bintype] = cls
-
-    cls = _Hist3D_class(type=bintype)
-    snake_case_methods(cls)
-    _HIST_CLASSES_3D[bintype] = cls
+    _HIST_CLASSES_1D[bintype] = _Hist_class(type=bintype)
+    _HIST_CLASSES_2D[bintype] = _Hist2D_class(type=bintype)
+    _HIST_CLASSES_3D[bintype] = _Hist3D_class(type=bintype)
 
 
 class Hist(_Hist, QROOT.TH1):
@@ -1199,7 +1193,7 @@ class Hist3D(_Hist3D, QROOT.TH3):
             *args, **kwargs)
 
 
-class HistStack(Plottable, NamedObject, QROOT.THStack):
+class HistStack(Plottable, NamedObject, pythonized(QROOT.THStack)):
 
     def __init__(self, name=None, title=None, hists=None, **kwargs):
 
@@ -1366,8 +1360,7 @@ if ROOT_VERSION >= (5, 28, 0):
 
     __all__.append('Efficiency')
 
-    @snake_case_methods
-    class Efficiency(Plottable, NamedObject, QROOT.TEfficiency):
+    class Efficiency(Plottable, NamedObject, pythonized(QROOT.TEfficiency)):
 
         def __init__(self, passed, total, name=None, title=None, **kwargs):
 

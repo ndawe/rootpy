@@ -1,7 +1,7 @@
 # Copyright 2012 the rootpy developers
 # distributed under the terms of the GNU General Public License
 from .. import QROOT
-from ..decorators import snake_case_methods
+from ..pythonize import pythonized
 from .core import Plottable
 from ..core import NameOnlyObject
 
@@ -13,8 +13,7 @@ __all__ = [
 ]
 
 
-@snake_case_methods
-class F1(Plottable, NameOnlyObject, QROOT.TF1):
+class F1(Plottable, NameOnlyObject, pythonized(QROOT.TF1)):
 
     def __init__(self, *args, **kwargs):
 
@@ -23,8 +22,7 @@ class F1(Plottable, NameOnlyObject, QROOT.TF1):
         self._post_init(**kwargs)
 
 
-@snake_case_methods
-class F2(Plottable, NameOnlyObject, QROOT.TF2):
+class F2(Plottable, NameOnlyObject, pythonized(QROOT.TF2)):
 
     def __init__(self, *args, **kwargs):
 
@@ -33,8 +31,7 @@ class F2(Plottable, NameOnlyObject, QROOT.TF2):
         self._post_init(**kwargs)
 
 
-@snake_case_methods
-class F3(Plottable, NameOnlyObject, QROOT.TF3):
+class F3(Plottable, NameOnlyObject, pythonized(QROOT.TF3)):
 
     def __init__(self, *args, **kwargs):
 

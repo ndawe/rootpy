@@ -1,12 +1,11 @@
 # Copyright 2012 the rootpy developers
 # distributed under the terms of the GNU General Public License
 from .. import QROOT
-from ..decorators import snake_case_methods
+from ..pythonized import pythonized
 from .core import Plottable
 
 
-@snake_case_methods
-class Line(Plottable, QROOT.TLine):
+class Line(Plottable, pythonized(QROOT.TLine)):
 
     def __init__(self, *args, **kwargs):
 
@@ -14,8 +13,7 @@ class Line(Plottable, QROOT.TLine):
         self._post_init(**kwargs)
 
 
-@snake_case_methods
-class Ellipse(Plottable, QROOT.TEllipse):
+class Ellipse(Plottable, pythonized(QROOT.TEllipse)):
 
     def __init__(self, *args, **kwargs):
 

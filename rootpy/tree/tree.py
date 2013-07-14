@@ -7,9 +7,10 @@ import fnmatch
 import ROOT
 
 import rootpy
+from ..pythonize import pythonized
 from ..context import set_directory, thread_specific_tmprootdir, do_nothing
 from ..core import NamedObject
-from ..decorators import snake_case_methods, method_file_check, method_file_cd
+from ..decorators import method_file_check, method_file_cd
 from ..plotting.core import Plottable
 from ..plotting import Hist, Canvas
 from .. import log; log = log[__name__]
@@ -751,8 +752,7 @@ class BaseTree(NamedObject): # Plottable
         return tree2array(self, *args, **kwargs)
 
 
-@snake_case_methods
-class Tree(BaseTree, QROOT.TTree):
+class Tree(BaseTree, pythonized(QROOT.TTree)):
     """
     Inherits from TTree so all regular TTree methods are available
     but certain methods (i.e. Draw) have been overridden
@@ -796,8 +796,7 @@ class Tree(BaseTree, QROOT.TTree):
             self._buffer.reset()
 
 
-@snake_case_methods
-class Ntuple(BaseTree, QROOT.TNtuple):
+class Ntuple(BaseTree, pythonized(QROOT.TNtuple)):
     """
     Inherits from TNtuple so all regular TNtuple/TTree methods are available
     but certain methods (i.e. Draw) have been overridden

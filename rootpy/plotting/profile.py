@@ -2,6 +2,7 @@
 # distributed under the terms of the GNU General Public License
 from array import array
 from .. import QROOT, log; log = log[__name__]
+from ..pythonize import pythonized
 from .hist import _Hist, _Hist2D, _Hist3D
 
 
@@ -9,7 +10,7 @@ class _ProfileBase(object):
     pass
 
 
-class Profile(_ProfileBase, _Hist, QROOT.TProfile):
+class Profile(_ProfileBase, _Hist, pythonized(QROOT.TProfile)):
 
     def __init__(self, *args, **kwargs):
 
@@ -41,7 +42,7 @@ class Profile(_ProfileBase, _Hist, QROOT.TProfile):
         self._post_init(**kwargs)
 
 
-class Profile2D(_ProfileBase, _Hist2D, QROOT.TProfile2D):
+class Profile2D(_ProfileBase, _Hist2D, pythonized(QROOT.TProfile2D)):
 
     def __init__(self, *args, **kwargs):
 
@@ -85,7 +86,7 @@ class Profile2D(_ProfileBase, _Hist2D, QROOT.TProfile2D):
         self._post_init(**kwargs)
 
 
-class Profile3D(_ProfileBase, _Hist3D, QROOT.TProfile3D):
+class Profile3D(_ProfileBase, _Hist3D, pythonized(QROOT.TProfile3D)):
 
     def __init__(self, *args, **kwargs):
 

@@ -3,11 +3,13 @@
 import ROOT
 
 from .. import QROOT, asrootpy
+from ..pythonize import pythonized
 from ..core import Object
 from .hist import HistStack
 from .box import Pave
 
-class Legend(QROOT.TLegend, Pave):
+
+class Legend(pythonized(QROOT.TLegend), Pave):
 
     def __init__(self, nentries,
                        pad=None,
@@ -88,5 +90,3 @@ class Legend(QROOT.TLegend, Pave):
     @property
     def primitives(self):
         return asrootpy(self.GetListOfPrimitives())
-        
-        

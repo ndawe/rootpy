@@ -3,7 +3,7 @@
 from ... import QROOT
 from ...core import (_repr_mixin, _copy_construct_mixin,
                      _resetable_mixin, isbasictype)
-from ...decorators import snake_case_methods
+from ...pythonize import pythonized
 import ROOT
 from copy import copy
 
@@ -106,9 +106,8 @@ class _arithmetic_mixin:
         return _copy
 
 
-@snake_case_methods
 class Vector2(_arithmetic_mixin, _copy_construct_mixin,
-              _resetable_mixin, _repr_mixin, QROOT.TVector2):
+              _resetable_mixin, _repr_mixin, pythonized(QROOT.TVector2)):
 
     def __repr__(self):
 
@@ -137,9 +136,8 @@ class Vector2(_arithmetic_mixin, _copy_construct_mixin,
         return _sum
 
 
-@snake_case_methods
 class Vector3(_arithmetic_mixin, _copy_construct_mixin,
-              _repr_mixin, _resetable_mixin, QROOT.TVector3):
+              _repr_mixin, _resetable_mixin, pythonized(QROOT.TVector3)):
 
     def __repr__(self):
 
@@ -188,9 +186,8 @@ class Vector3(_arithmetic_mixin, _copy_construct_mixin,
         return _dif
 
 
-@snake_case_methods
 class LorentzVector(_arithmetic_mixin, _copy_construct_mixin,
-                    _repr_mixin, _resetable_mixin, QROOT.TLorentzVector):
+                    _repr_mixin, _resetable_mixin, pythonized(QROOT.TLorentzVector)):
 
     def __repr__(self):
 
@@ -210,9 +207,8 @@ class LorentzVector(_arithmetic_mixin, _copy_construct_mixin,
         return vector
 
 
-@snake_case_methods
 class Rotation(_arithmetic_mixin, _copy_construct_mixin,
-               _repr_mixin, _resetable_mixin, QROOT.TRotation):
+               _repr_mixin, _resetable_mixin, pythonized(QROOT.TRotation)):
 
     def __repr__(self):
 
@@ -223,9 +219,8 @@ class Rotation(_arithmetic_mixin, _copy_construct_mixin,
                                    self.ZX(), self.ZY(), self.ZZ())
 
 
-@snake_case_methods
 class LorentzRotation(_arithmetic_mixin, _copy_construct_mixin,
-                      _repr_mixin, _resetable_mixin, QROOT.TLorentzRotation):
+                      _repr_mixin, _resetable_mixin, pythonized(QROOT.TLorentzRotation)):
 
     def __repr__(self):
 

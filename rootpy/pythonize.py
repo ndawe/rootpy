@@ -8,6 +8,7 @@ from . import log; log = log[__name__]
 from .util.cpp import CPPGrammar
 from .util.extras import camel_to_snake
 from . import userdata, ROOTError
+from .extern.lockfile import LockFile
 
 
 __all__ = [
@@ -235,19 +236,20 @@ def pythonized(cls):
     cls_name = cls.__name__
     out_name = os.path.join(SOURCE_PATH, '{0}.py'.format(cls_name))
     subcls_name = '{0}_pythonized'.format(cls_name)
-    if not os.path.isfile(out_name):
-        # create new pythonized class
-        log.info("generating pythonized subclass of `{0}`".format(cls_name))
-        try:
-            with open(out_name, 'w') as out_file:
-                subcls_src = Class(subcls_name, cls_name)
-                methods = inspect.getmembers(cls, predicate=inspect.ismethod)
-                descriptors(cls, methods, subcls_src)
-                snake_case_methods(cls, methods, subcls_src)
-                out_file.write(str(subcls_src))
-        except:
-            os.unlink(out_name)
-            raise
+    with LockFile(os.path.join(SOURCE_PATH, "lock")):
+        if not os.path.isfile(out_name):
+            # create new pythonized class
+            log.info("generating pythonized subclass of `{0}`".format(cls_name))
+            try:
+                with open(out_name, 'w') as out_file:
+                    subcls_src = Class(subcls_name, cls_name)
+                    methods = inspect.getmembers(cls, predicate=inspect.ismethod)
+                    descriptors(cls, methods, subcls_src)
+                    snake_case_methods(cls, methods, subcls_src)
+                    out_file.write(str(subcls_src))
+            except:
+                os.unlink(out_name)
+                raise
     # import existing file and get the class
     log.debug(
         "using existing pythonized subclass of `{0}`".format(cls_name))
