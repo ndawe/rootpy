@@ -6,7 +6,7 @@ This module enhances IO-related ROOT functionality
 import ROOT
 
 from ..core import Object, NamedObject
-from ..decorators import snake_case_methods
+from ..pythonize import pythonized
 from ..context import preserve_current_directory
 from .. import asrootpy, QROOT, gDirectory
 from ..util.path import expand as expand_path
@@ -111,8 +111,7 @@ def root_open(filename, mode=''):
     return root_file
 
 
-@snake_case_methods
-class Key(NamedObject, QROOT.TKey):
+class Key(NamedObject, pythonized(QROOT.TKey)):
     pass
 
 
@@ -440,8 +439,7 @@ class _DirectoryBase(Object):
                 yield x
 
 
-@snake_case_methods
-class Directory(_DirectoryBase, QROOT.TDirectoryFile):
+class Directory(_DirectoryBase, pythonized(QROOT.TDirectoryFile)):
     """
     Inherits from TDirectory
     """
@@ -457,7 +455,6 @@ class Directory(_DirectoryBase, QROOT.TDirectoryFile):
         self._inited = True
 
 
-@snake_case_methods
 class _FileBase(_DirectoryBase):
 
     def __init__(self, name, *args, **kwargs):
@@ -484,36 +481,31 @@ class _FileBase(_DirectoryBase):
     def _populate_cache(self):
 
         """
-         walk through the whole file and populate the cache
-         all objects below the current path are added, i.e.
-         for the contents with ina, inb and inab TH1F histograms:
+        walk through the whole file and populate the cache
+        all objects below the current path are added, i.e.
+        for the contents with ina, inb and inab TH1F histograms:
 
-         /a/ina
-         /b/inb
-         /a/b/inab
+        /a/ina
+        /b/inb
+        /a/b/inab
 
-         the cache is (omitting the directories):
+        the cache is (omitting the directories):
 
-         cache[""]["obj"] = [("a", ("ina", "TH1F")), ("b", ("inb", "TH1F")), ("a/b", ("inab", "TH1F"))]
+        cache[""]["obj"] = [("a", ("ina", "TH1F")), ("b", ("inb", "TH1F")), ("a/b", ("inab", "TH1F"))]
 
-         ...
+        ...
 
-         cache[""]["a"]["b"]["obj"] = [("a/b", ("inab", "TH1F"))]
+        cache[""]["a"]["b"]["obj"] = [("a/b", ("inab", "TH1F"))]
         """
 
         self.cache = autovivitree()
 
         for path, dirs, objects in self.walk(return_classname=True,
                                              treat_dirs_as_objs=True):
-
             b = self.cache
-
             for d in [""]+path.split('/'):
-
                 b = b[d]
-
                 obj = [(path, o) for o in objects]
-
                 if "obj" in b:
                     b["obj"] += obj
                 else:
@@ -525,52 +517,37 @@ class _FileBase(_DirectoryBase):
              find_fnc=re.search,
              refresh_cache=False):
         """
-
         yield the full path of the matching regular expression and the
         match itself
-
         """
-
         if refresh_cache or not hasattr(self,"cache"):
             self._populate_cache()
-
         b = self.cache
-
         split_regexp = regexp.split('/')
 
         # traverse as deep as possible in the cache
         # special case if the first character is not the root, i.e. not ""
         if split_regexp[0] == "":
-
             for d in split_regexp:
-
                 if d in b:
                     b = b[d]
                 else:
                     break
-
         else:
             b = b[""]
 
         # perform the search
-
         for path, (obj, classname) in b["obj"]:
-
             if class_pattern:
                 if not fnmatch(classname, class_pattern):
                     continue
-
             joined_path = os.path.join(*['/',path,obj])
-
             result = find_fnc(regexp,joined_path)
-
             if (result != None) ^ negate_regexp:
-
                 yield joined_path, result
 
 
-@snake_case_methods
-class File(_FileBase, QROOT.TFile):
+class File(_FileBase, pythonized(QROOT.TFile)):
     """
     A subclass of ROOT's TFile adding all of the rootpy goodness.
 
@@ -583,8 +560,7 @@ class File(_FileBase, QROOT.TFile):
     Open = staticmethod(root_open)
 
 
-@snake_case_methods
-class MemFile(_FileBase, QROOT.TMemFile):
+class MemFile(_FileBase, pythonized(QROOT.TMemFile)):
     """
     A subclass of ROOT's TMemFile adding all of the rootpy goodness.
 
@@ -594,8 +570,7 @@ class MemFile(_FileBase, QROOT.TMemFile):
     pass
 
 
-@snake_case_methods
-class TemporaryFile(File):
+class TemporaryFile(File, pythonized(QROOT.TFile)):
     """
     A temporary ROOT file that is automatically deleted when closed.
     Uses Python's :func:`tempfile.mkstemp` to obtain a temporary file
