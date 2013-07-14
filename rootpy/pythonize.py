@@ -7,7 +7,7 @@ import keyword
 from . import log; log = log[__name__]
 from .util.cpp import CPPGrammar
 from .util.extras import camel_to_snake
-from . import userdata
+from . import userdata, ROOTError
 
 
 __all__ = [
@@ -51,6 +51,23 @@ class ROOTStaticDescriptor(ROOTDescriptor):
         self.root_setter(value)
 
 
+def check_name(cls, name):
+
+    llog = log['check_name']
+    llog.debug('{0}.{1}'.format(cls.__name__, name))
+    # hasattr(TMemFile, 'flush')
+    # Error in <TClass::BuildRealData>: Cannot find any ShowMembers
+    # function for G__CINT_FLUSH!
+    if name == 'flush' or hasattr(cls, name):
+        llog.debug("{0} is already a member of {1}".format(
+            name, cls.__name__))
+        return False
+    if keyword.iskeyword(name):
+        llog.debug("{0} is a python keyword".format(name))
+        return False
+    return True
+
+
 def snake_case_methods(cls, methods, cls_proxy):
     """
     A class decorator adding snake_case methods
@@ -80,12 +97,7 @@ def snake_case_methods(cls, methods, cls_proxy):
         # convert CamelCase to snake_case
         snake_name = camel_to_snake(name)
         llog.debug("{0} -> {1}".format(name, snake_name))
-        if hasattr(cls, snake_name):
-            llog.warning("{0} is already a member of {1}".format(
-                snake_name, cls.__name__))
-            continue
-        if keyword.iskeyword(snake_name):
-            llog.warning("{0} is a python keyword".format(snake_name))
+        if not check_name(cls, snake_name):
             continue
         cls_proxy.attrs.append(
             Attribute(snake_name, 'ROOT_CLS.{0}'.format(method.__name__)))
@@ -116,23 +128,18 @@ def descriptors(cls, methods, cls_proxy):
             getters[desc_match.group('prop')] = (thing, sig[0] == 'static')
     for name in setters:
         if name not in getters:
-            log.warning(
+            llog.debug(
                 "Set{0} does not have an associated Get{0}".format(name))
             continue
         setter, setter_static = setters[name]
         getter, getter_static = getters[name]
         if setter_static != getter_static:
-            llog.warning("only one of Set{0} and Get{0} is static".format(name))
+            llog.debug("only one of Set{0} and Get{0} is static".format(name))
             continue
         snake_name = camel_to_snake(name)
         llog.debug('creating {0}descriptor `{1}`'.format(
             'static ' if setter_static else '', snake_name))
-        if hasattr(cls, snake_name):
-            llog.warning("{0} is already a member of {1}".format(
-                snake_name, cls.__name__))
-            continue
-        if keyword.iskeyword(snake_name):
-            llog.warning("{0} is a python keyword".format(snake_name))
+        if not check_name(cls, snake_name):
             continue
         desc_cls = 'ROOTStaticDescriptor' if setter_static else 'ROOTDescriptor'
         cls_proxy.attrs.append(
@@ -231,12 +238,16 @@ def pythonized(cls):
     if not os.path.isfile(out_name):
         # create new pythonized class
         log.info("generating pythonized subclass of `{0}`".format(cls_name))
-        with open(out_name, 'w') as out_file:
-            subcls_src = Class(subcls_name, cls_name)
-            methods = inspect.getmembers(cls, predicate=inspect.ismethod)
-            descriptors(cls, methods, subcls_src)
-            snake_case_methods(cls, methods, subcls_src)
-            out_file.write(str(subcls_src))
+        try:
+            with open(out_name, 'w') as out_file:
+                subcls_src = Class(subcls_name, cls_name)
+                methods = inspect.getmembers(cls, predicate=inspect.ismethod)
+                descriptors(cls, methods, subcls_src)
+                snake_case_methods(cls, methods, subcls_src)
+                out_file.write(str(subcls_src))
+        except:
+            os.unlink(out_name)
+            raise
     # import existing file and get the class
     log.debug(
         "using existing pythonized subclass of `{0}`".format(cls_name))
