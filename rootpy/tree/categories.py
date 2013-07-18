@@ -115,7 +115,8 @@ class Categories(object):
                  rightchild=None,
                  parent=None,
                  forbidleft=False,
-                 forbidright=False):
+                 forbidright=False,
+                 lower_inclusive=False):
 
         self.feature = feature
         self.data = data
@@ -125,6 +126,7 @@ class Categories(object):
         self.parent = parent
         self.forbidleft = forbidleft
         self.forbidright = forbidright
+        self.lower_inclusive = lower_inclusive
 
     def clone(self):
 
@@ -141,7 +143,8 @@ class Categories(object):
                 rightclone,
                 self.parent,
                 self.forbidleft,
-                self.forbidright)
+                self.forbidright,
+                self.lower_inclusive)
 
     def __str__(self):
 
@@ -156,10 +159,10 @@ class Categories(object):
         elif self.rightchild is not None:
             rightstr = str(self.rightchild)
         if self.feature >= 0:
-            return "{%s:%s|%s%s%s}" % (
-                    self.variables[self.feature]
-                    + (leftstr, str(self.data), rightstr))
-        return "{<<leaf>>|%s}" % (str(self.data))
+            return "{{0}:{1}|{2}{3}{4}}".format(
+                    *self.variables[self.feature],
+                    leftstr, str(self.data), rightstr)
+        return "{<<leaf>>|{0}}".format(str(self.data))
 
     def __repr__(self):
 
@@ -251,23 +254,25 @@ class Categories(object):
         return total
 
     def walk(self, expression=None):
-
+        """
+        Walk the category tree and yield the categories.
+        """
         if expression is None:
             expression = Cut()
         if self.feature < 0:
             if expression:
                 yield expression
         if not self.forbidleft:
-            leftcondition = expression & Cut("%s<=%s" %
-                    (self.variables[self.feature][0], self.data))
+            leftcondition = expression & Cut("{0}<={1}".format(
+                self.variables[self.feature][0], self.data))
             if self.leftchild is not None:
                 for condition in self.leftchild.walk(leftcondition):
                     yield condition
             else:
                 yield leftcondition
         if not self.forbidright:
-            rightcondition = expression & Cut("%s>%s" %
-                    (self.variables[self.feature][0], self.data))
+            rightcondition = expression & Cut("{0}>{1}".format(
+                self.variables[self.feature][0], self.data))
             if self.rightchild is not None:
                 for condition in self.rightchild.walk(rightcondition):
                     yield condition
