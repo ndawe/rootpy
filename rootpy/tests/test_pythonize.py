@@ -1,6 +1,6 @@
 # Copyright 2012 the rootpy developers
 # distributed under the terms of the GNU General Public License
-from rootpy.pythonize import pythonized
+from rootpy.pythonize import SnakeMethods
 from nose.tools import assert_equal, assert_true
 
 
@@ -15,10 +15,9 @@ def test_snake_case_methods():
         def cd(self): pass
         def LongMethodName(self): pass
 
+    @SnakeMethods
     class B(A):
         def write(self): pass
-
-    B = pythonized(B)
 
     assert_true(hasattr(B, 'some_method'))
     assert_true(hasattr(B, 'cd'))
@@ -43,7 +42,7 @@ def test_snake_case_methods_descriptor():
         prop = A.__dict__["Prop"]
         sm = A.__dict__["Sm"]
 
-    snakeB = pythonized(A)
+    snakeB = SnakeMethods(True)(A)
 
     # Ensure that no accidental descriptor dereferences happened inside
     # `snake_case_methods`. This is checked by making sure that the types

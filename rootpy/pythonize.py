@@ -59,52 +59,102 @@ def check_name(cls, name):
     # hasattr(TMemFile, 'flush')
     # Error in <TClass::BuildRealData>: Cannot find any ShowMembers
     # function for G__CINT_FLUSH!
-    if name == 'flush' or hasattr(cls, name):
+    if name == 'flush':
+        return False
+    """ This check is slow!
+    if hasattr(cls, name):
         llog.debug("{0} is already a member of {1}".format(
             name, cls.__name__))
         return False
+    """
     if keyword.iskeyword(name):
         llog.debug("{0} is a python keyword".format(name))
         return False
     return True
 
 
-def snake_case_methods(cls, methods, cls_proxy):
-    """
-    A class decorator adding snake_case methods
-    that alias capitalized ROOT methods
-    """
-    if not CONVERT_SNAKE_CASE:
-        return
-    llog = log['snake_case_methods']
-    # filter out any methods that already exist in lower and uppercase forms
-    # i.e. TDirectory::cd and Cd...
-    names = [name.capitalize() for (name, method) in methods]
-    duplicate_idx = set()
-    seen = []
-    for i, n in enumerate(names):
-        try:
-            idx = seen.index(n)
-            duplicate_idx.add(i)
-            duplicate_idx.add(idx)
-        except ValueError:
-            seen.append(n)
-    for i, (name, method) in enumerate(methods):
-        if i in duplicate_idx:
-            continue
-        # Don't touch special methods or methods without cap letters
-        if name[0] == '_' or name.islower():
-            continue
-        # convert CamelCase to snake_case
-        snake_name = camel_to_snake(name)
-        llog.debug("{0} -> {1}".format(name, snake_name))
-        if not check_name(cls, snake_name):
-            continue
-        cls_proxy.attrs.append(
-            Attribute(snake_name, 'ROOT_CLS.{0}'.format(method.__name__)))
+
+class SnakeMethods(object):
+
+    def __init__(self, inherited=False):
+        self.inherited = inherited
+
+    @staticmethod
+    def get_snake_names(cls, methods=None, inherited=False):
+
+        if not CONVERT_SNAKE_CASE:
+            return []
+        if methods is None:
+            if inherited:
+                methods = inspect.getmembers(cls, predicate=inspect.ismethod)
+            else:
+                methods = [
+                    (name, thing) for (name, thing) in cls.__dict__
+                        if inspect.ismethod(thing)]
+
+        # filter out any methods that already exist in lower and uppercase forms
+        # i.e. TDirectory::cd and Cd...
+        names = [name.capitalize() for (name, method) in methods]
+        duplicate_idx = set()
+        seen = []
+        for i, n in enumerate(names):
+            try:
+                idx = seen.index(n)
+                duplicate_idx.add(i)
+                duplicate_idx.add(idx)
+            except ValueError:
+                seen.append(n)
+        names = []
+        for i, (name, method) in enumerate(methods):
+            if i in duplicate_idx:
+                continue
+            # Don't touch special methods or methods without cap letters
+            if name[0] == '_' or name.islower():
+                continue
+            # convert CamelCase to snake_case
+            snake_name = camel_to_snake(name)
+            if not check_name(cls, snake_name):
+                continue
+            names.append((name, snake_name))
+        return names
+
+    def __call__(self, cls):
+        """
+        A class decorator adding snake_case methods
+        that alias capitalized ROOT methods
+        """
+        llog = log['snake_methods']
+        names = SnakeMethods.get_snake_names(cls, inherited=self.inherited)
+        for name, snake_name in names:
+            llog.debug("{0} -> {1}".format(name, snake_name))
+
+            # Use a __dict__ lookup rather than getattr because we _want_ to
+            # obtain the _descriptor_, and not what the descriptor gives us when
+            # it is `getattr`'d.
+            value = None
+            for c in inspect.getmro(cls):
+                if name in c.__dict__:
+                    value = c.__dict__[name]
+                    break
+            # <neo>Woah, a use for for-else</neo>
+            else:
+                # Weird. Maybe the item lives somewhere else, such as on the
+                # metaclass?
+                value = getattr(cls, name)
+
+            setattr(cls, snake_name, value)
+
+    def snake_methods(self, base_cls, methods, cls_proxy):
+
+        llog = log['snake_methods']
+        names = SnakeMethods.get_snake_names(base_cls, inherited=self.inherited)
+        for name, snake_name in names:
+            cls_proxy.attrs.append(
+                Attribute(snake_name, '{0}.{1}'.format(
+                    base_cls.__name__, name)))
 
 
-def descriptors(cls, methods, cls_proxy):
+def descriptors(base_cls, methods, cls_proxy):
 
     llog = log['descriptors']
     setters = dict()
@@ -140,14 +190,15 @@ def descriptors(cls, methods, cls_proxy):
         snake_name = camel_to_snake(name)
         llog.debug('creating {0}descriptor `{1}`'.format(
             'static ' if setter_static else '', snake_name))
-        if not check_name(cls, snake_name):
+        if not check_name(base_cls, snake_name):
             continue
         desc_cls = 'ROOTStaticDescriptor' if setter_static else 'ROOTDescriptor'
         cls_proxy.attrs.append(
             Attribute(
                 snake_name,
-                '{0}(ROOT_CLS.{1}, ROOT_CLS.{2})'.format(
-                    desc_cls, setter.__name__, getter.__name__)))
+                '{0}({1}.{2}, {1}.{3})'.format(
+                    desc_cls, base_cls.__name__,
+                    setter.__name__, getter.__name__)))
 
 
 class Argument(object):
@@ -204,9 +255,9 @@ class Class(object):
 from rootpy.pythonize import ROOTDescriptor, ROOTStaticDescriptor
 from rootpy import asrootpy, QROOT
 
-ROOT_CLS = QROOT.{0}
+{0} = QROOT.{0}
 
-class {1}(ROOT_CLS):
+class {1}({0}):
 {2}
     '''
 
@@ -245,7 +296,7 @@ def pythonized(cls):
                     subcls_src = Class(subcls_name, cls_name)
                     methods = inspect.getmembers(cls, predicate=inspect.ismethod)
                     descriptors(cls, methods, subcls_src)
-                    snake_case_methods(cls, methods, subcls_src)
+                    SnakeMethods(True).snake_methods(cls, methods, subcls_src)
                     out_file.write(str(subcls_src))
             except:
                 os.unlink(out_name)
