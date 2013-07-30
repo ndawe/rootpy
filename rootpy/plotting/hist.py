@@ -783,19 +783,21 @@ class _Hist2D(_HistBase):
 
     def ravel(self, name=None):
         """
-        Convert 2D histogram into 1D histogram with the y-axis repeated along
-        the x-axis, similar to NumPy's ravel().
+        Convert a 2D histogram into a 1D histogram with the y-axis repeated
+        along the x-axis, similar to NumPy's ravel().
         """
         nbinsx = self.nbins(1)
         nbinsy = self.nbins(2)
         left_edge = self.xedgesl(0)
         right_edge = self.xedgesh(-1)
-        out = Hist(nbinsx * nbinsy,
-                   left_edge, nbinsy * (right_edge - left_edge) + left_edge,
-                   type=self.TYPE,
-                   name=name,
-                   title=self.title,
-                   **self.decorators)
+        out = Hist(
+            nbinsx * nbinsy,
+            left_edge,
+            nbinsy * (right_edge - left_edge) + left_edge,
+            type=self.TYPE,
+            name=name,
+            title=self.title,
+            **self.decorators)
         for i, bin in enumerate(self.bins(overflow=False)):
             out[i] = bin.value
             out.SetBinError(i + 1, bin.error)
@@ -1001,6 +1003,30 @@ class _Hist3D(_HistBase):
         def __setitem(k, value):
             self.SetBinContent(i + 1, j + 1, k + 1, value)
         return __setitem
+
+    def ravel(self, name=None):
+        """
+        Convert a 3D histogram into a 2D histogram with the z-axis repeated
+        along the y-axis.
+        """
+        nbinsx = self.nbins(1)
+        nbinsy = self.nbins(2)
+        nbinsz = self.nbins(3)
+        left_edge = self.xedgesl(0)
+        right_edge = self.xedgesh(-1)
+        out = Hist2D(
+            nbinsx,
+            nbinsy * nbinsz,
+            left_edge,
+            nbinsy * (right_edge - left_edge) + left_edge,
+            type=self.TYPE,
+            name=name,
+            title=self.title,
+            **self.decorators)
+        for i, bin in enumerate(self.bins(overflow=False)):
+            out[i] = bin.value
+            out.SetBinError(i + 1, bin.error)
+        return out
 
 
 def _Hist_class(type='F'):
