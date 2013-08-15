@@ -478,6 +478,33 @@ class _HistBase(Plottable, NamedObject):
         self.GetQuantiles(len(quantiles), output, qs)
         return list(output)
 
+    def normalize(self, density=False, copy=False):
+        """
+        Normalize to unit count or area.
+
+        Parameters
+        ----------
+        overflow : bool, optional (default=False)
+            If True, then include the contents of the overflow bins in the
+            integral.
+        density : bool, optional (default=False)
+            If True, then multiply by the bin widths when calculating
+            the integral. The resulting histogram will have unit area.
+        copy : bool, optional (default=False)
+            If True, then normalize and return a clone and
+            leave self untouched.
+
+        Returns
+        -------
+        hist : histogram
+            The normalized histogram (self if copy is False)
+        """
+        integral = self.Integral('width' if density else '')
+        hist = self if not copy else self.Clone()
+        if integral != 0:
+            hist *= 1. / integral
+        return hist
+
     def FillRandom(self, func, ntimes=5000):
 
         if isinstance(func, QROOT.TF1):
