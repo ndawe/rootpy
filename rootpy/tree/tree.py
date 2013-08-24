@@ -386,44 +386,33 @@ class BaseTree(NamedObject):
             self.create_buffer()
         if self.read_branches_on_demand:
             self._buffer.set_tree(self)
+            # disable all branches
+            self.SetBranchStatus('*', 0)
             # drop all branches from the cache
             self.DropBranchFromCache('*')
             for attr in self._always_read:
-                try:
-                    branch = self._branch_cache[attr]
-                except KeyError:  # one-time hit
-                    branch = self.GetBranch(attr)
-                    if not branch:
-                        raise AttributeError(
-                            "branch `{0}` specified in "
-                            "`always_read` does not exist".format(attr))
-                    self._branch_cache[attr] = branch
+                if not self.has_branch(attr):
+                    raise AttributeError(
+                        "branch `{0}` specified in "
+                        "`always_read` does not exist".format(attr))
+                # enable the branch
+                self.SetBranchStatus(attr, 1)
                 # add branches that we should always read to cache
-                self.AddBranchToCache(branch)
+                self.AddBranchToCache(attr)
 
             for i in xrange(self.GetEntries()):
+                # Read all activated branches.
+                super(BaseTree, self).GetEntry(i)
                 # Only increment current entry.
                 # getattr on a branch will then GetEntry on only that branch
                 # see ``TreeBuffer.get_with_read_if_cached``.
                 self._current_entry = i
-                self.LoadTree(i)
-                for attr in self._always_read:
-                    # Always read branched in ``self._always_read`` since
-                    # these branches may never be getattr'd but the TreeBuffer
-                    # should always be updated to reflect their current values.
-                    # This is useful if you are iterating over an input tree
-                    # and writing to an output tree that shares the same
-                    # TreeBuffer but you don't getattr on all branches of the
-                    # input tree in the logic that determines which entries
-                    # to keep.
-                    self._branch_cache[attr].GetEntry(i)
                 self._buffer._entry.set(i)
                 yield self._buffer
-                self._buffer.next_entry()
                 self._buffer.reset_collections()
         else:
             for i in xrange(self.GetEntries()):
-                # Read all activated branches (can be slow!).
+                # Read all activated branches.
                 super(BaseTree, self).GetEntry(i)
                 self._buffer._entry.set(i)
                 yield self._buffer

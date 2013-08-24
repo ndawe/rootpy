@@ -27,10 +27,8 @@ class TreeBuffer(OrderedDict):
         super(TreeBuffer, self).__init__()
         self._fixed_names = {}
         self._branch_cache = {}
-        self._branch_cache_event = {}
         self._tree = tree
         self._ignore_unsupported = ignore_unsupported
-        self._current_entry = 0
         self._collections = {}
         self._objects = []
         self._entry = Int(0)
@@ -124,14 +122,7 @@ class TreeBuffer(OrderedDict):
     def set_tree(self, tree=None):
 
         self._branch_cache = {}
-        self._branch_cache_event = {}
         self._tree = tree
-        self._current_entry = 0
-
-    def next_entry(self):
-
-        super(TreeBuffer, self).__setattr__('_branch_cache_event', {})
-        self._current_entry += 1
 
     def get_with_read_if_cached(self, attr):
 
@@ -144,11 +135,11 @@ class TreeBuffer(OrderedDict):
                 if not branch:
                     raise AttributeError
                 self._branch_cache[attr] = branch
+                # enable the branch for future reads
+                self._tree.SetBranchStatus(attr, 1)
+                # add the branch to the cache
                 self._tree.AddBranchToCache(branch)
-            if branch not in self._branch_cache_event:
-                # branch is being accessed for the first time in this entry
-                branch.GetEntry(self._current_entry)
-                self._branch_cache_event[branch] = None
+                branch.GetEntry(self._tree._current_entry)
         return super(TreeBuffer, self).__getitem__(attr)
 
     def __setitem__(self, name, value):
