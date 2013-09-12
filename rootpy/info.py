@@ -12,7 +12,9 @@
 from __future__ import absolute_import
 
 from collections import namedtuple
+import platform
 
+CPYTHON = platform.python_implementation() == 'CPython'
 
 _version_info_base = namedtuple(
     'version_info',

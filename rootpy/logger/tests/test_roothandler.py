@@ -1,9 +1,9 @@
 # Copyright 2012 the rootpy developers
 # distributed under the terms of the GNU General Public License
 from rootpy.defaults import use_rootpy_handler, use_rootpy_magic
+from nose.plugins.skip import SkipTest
 
 if not use_rootpy_handler or not use_rootpy_magic:
-    from nose.plugins.skip import SkipTest
     raise SkipTest()
 
 import logging
@@ -15,110 +15,118 @@ import ROOT
 
 import rootpy
 import rootpy.logger.magic as M
+from rootpy.info import CPYTHON
 
 from rootpy import ROOTError
 from .logcheck import EnsureLogContains
 
-M.DANGER.enabled = True
+if CPYTHON:
+    M.DANGER.enabled = True
 
 NONEXISTENT_FILE = "this-file-should-never-exist-7b078562896325fa8007a0eb0.root"
 
 #rootpy.log["/ROOT.rootpy"].showstack(".*tracing.*")
 
+
 @EnsureLogContains("WARNING", "^This is a test message$")
 def test_logging_root_messages():
     ROOT.Warning("rootpy.logger.tests", "This is a test message")
 
-@raises(ROOTError)
-def test_root_error():
-    ROOT.Error("rootpy.logger.tests", "This is a test exception")
 
-@raises(ROOTError)
-def test_nonexistent_file():
-    ROOT.TFile(NONEXISTENT_FILE)
+if CPYTHON:
+    @raises(ROOTError)
+    def test_root_error():
+        if not CPYTHON:
+            raise SkipTest()
+        ROOT.Error("rootpy.logger.tests", "This is a test exception")
 
-@raises(ROOTError)
-def test_error_finally():
-    try:
-        ROOT.Error("test", "finally")
-    finally:
-        test = 1
 
-@raises(ROOTError)
-def test_gdebug_finally():
-    ROOT.gDebug = 1
-    try:
-        ROOT.Error("test", "finally [rootpy.ALWAYSABORT]")
-    finally:
-        ROOT.gDebug = 0
-
-def test_nonexistent_file_redux():
-    try:
-        ROOT.TFile(NONEXISTENT_FILE)
-    except ROOTError as e:
-        assert e.location == "TFile::TFile"
-        assert e.level == 3000
-        assert NONEXISTENT_FILE in e.msg
-        assert "does not exist" in e.msg
-    else:
-        assert False, "Should have thrown"
-
-# The following tests ensure that things work as expected with different constructs
-
-@raises(ROOTError)
-def test_nonexistent_file_redux_part_2():
-    if True:
+    @raises(ROOTError)
+    def test_nonexistent_file():
         ROOT.TFile(NONEXISTENT_FILE)
 
-@raises(ROOTError)
-def test_nonexistent_file_redux_part_3_the_loopening():
-    for i in range(10):
-        ROOT.TFile(NONEXISTENT_FILE)
 
-@raises(ROOTError)
-def test_nonexistent_file_redux_part_4_the_withinating():
-    class Context(object):
-        def __enter__(*args): pass
-        def __exit__(*args): pass
+    @raises(ROOTError)
+    def test_error_finally():
+        try:
+            ROOT.Error("test", "finally")
+        finally:
+            test = 1
 
-    with Context():
-        ROOT.TFile(NONEXISTENT_FILE)
 
-def test_correct_bytecode_functioning():
-    # This test ensures that we don't break opcodes which follow exceptions
+    @raises(ROOTError)
+    def test_gdebug_finally():
+        ROOT.gDebug = 1
+        try:
+            ROOT.Error("test", "finally [rootpy.ALWAYSABORT]")
+        finally:
+            ROOT.gDebug = 0
 
-    fail = True
-    class Continued:
-        success = False
+    # The following tests ensure that things work as expected with different constructs
 
-    def try_fail():
-        if fail:
-            ROOT.Error("rooypy.logger.tests", "TEST")
-        Continued.success = True
+    @raises(ROOTError)
+    def test_nonexistent_file_redux_part_2():
+        if True:
+            ROOT.TFile(NONEXISTENT_FILE)
 
-    orig_code_bytes = [ord(i) for i in try_fail.func_code.co_code]
 
-    #import dis
-    #dis.dis(try_fail)
+    @raises(ROOTError)
+    def test_nonexistent_file_redux_part_3_the_loopening():
+        for i in range(10):
+            ROOT.TFile(NONEXISTENT_FILE)
 
-    try:
+
+    @raises(ROOTError)
+    def test_nonexistent_file_redux_part_4_the_withinating():
+        class Context(object):
+            def __enter__(*args): pass
+            def __exit__(*args): pass
+
+        with Context():
+            ROOT.TFile(NONEXISTENT_FILE)
+
+
+    def test_correct_bytecode_functioning():
+        # This test ensures that we don't break opcodes which follow exceptions
+        if not CPYTHON:
+            raise SkipTest()
+
+        fail = True
+        class Continued:
+            success = False
+
+        def try_fail():
+            if fail:
+                ROOT.Error("rooypy.logger.tests", "TEST")
+            Continued.success = True
+
+        orig_code_bytes = [ord(i) for i in try_fail.func_code.co_code]
+
+        #import dis
+        #dis.dis(try_fail)
+
+        try:
+            try_fail()
+        except ROOTError:
+            pass
+        else:
+            assert False, "Should have thrown"
+
+        #print "#"*80
+        #dis.dis(try_fail)
+        new_code_bytes = [ord(i) for i in try_fail.func_code.co_code]
+        assert orig_code_bytes == new_code_bytes
+
+        fail = False
         try_fail()
-    except ROOTError:
-        pass
-    else:
-        assert False, "Should have thrown"
 
-    #print "#"*80
-    #dis.dis(try_fail)
-    new_code_bytes = [ord(i) for i in try_fail.func_code.co_code]
-    assert orig_code_bytes == new_code_bytes
+        assert Continued.success
 
-    fail = False
-    try_fail()
-
-    assert Continued.success
 
 def test_tracing_is_broken():
+    if not CPYTHON:
+        raise SkipTest()
+
     def mytrace(*args):
         pass
 
@@ -136,3 +144,17 @@ def test_tracing_is_broken():
     sys.settrace(orig_trace)
 
     assert should_be_mytrace != mytrace, "Tracing is fixed?! Awesome. Now fix the test."
+
+
+def test_nonexistent_file_redux():
+    if not CPYTHON:
+        raise SkipTest()
+    try:
+        ROOT.TFile(NONEXISTENT_FILE)
+    except ROOTError as e:
+        assert e.location == "TFile::TFile"
+        assert e.level == 3000
+        assert NONEXISTENT_FILE in e.msg
+        assert "does not exist" in e.msg
+    else:
+        assert False, "Should have thrown"

@@ -13,7 +13,10 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 from . import log; log = log[__name__]
 from . import QROOT
 from .logger import set_error_handler, python_logging_error_handler
-from .logger.magic import DANGER, fix_ipython_startup
+from .logger.magic import DANGER
+from .info import CPYTHON
+if CPYTHON:
+    from .logger.magic import fix_ipython_startup
 
 
 __all__ = []
@@ -29,7 +32,7 @@ use_rootpy_handler = not os.environ.get('NO_ROOTPY_HANDLER', False)
 use_rootpy_magic = not os.environ.get('NO_ROOTPY_MAGIC', False)
 
 if use_rootpy_handler:
-    if use_rootpy_magic:
+    if CPYTHON and use_rootpy_magic:
         # See magic module for more details
         DANGER.enabled = True
     else:
@@ -160,7 +163,7 @@ if hasattr(ROOT.__class__, "_ModuleFacade__finalSetup"):
 
     ROOT.__class__._ModuleFacade__finalSetup = wrapFinalSetup
 
-    if "__IPYTHON__" in __builtins__:
+    if CPYTHON and "__IPYTHON__" in __builtins__:
         # ROOT has a bug causing it to print (Bool_t)1 to the console.
         fix_ipython_startup(finalSetup)
 

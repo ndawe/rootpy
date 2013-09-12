@@ -8,7 +8,10 @@ import re
 import sys
 
 from . import root_logger, log
-from .magic import DANGER, set_error_handler, re_execute_with_exception
+from ..info import CPYTHON
+from .magic import DANGER, set_error_handler
+if CPYTHON:
+    from .magic import re_execute_with_exception
 
 __all__ = [
     'fixup_msg',
@@ -107,7 +110,7 @@ def python_logging_error_handler(level, root_says_abort, location, msg):
             from traceback import print_stack
             print_stack(caller)
 
-        if DANGER.enabled:
+        if CPYTHON and DANGER.enabled:
             # Avert your eyes, dark magic be within...
             re_execute_with_exception(caller, exc, traceback)
 

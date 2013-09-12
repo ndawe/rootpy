@@ -19,7 +19,9 @@ import sys
 
 import ROOT as R
 
-from ..logger.magic import fix_ipython_startup
+from ..info import CPYTHON
+if CPYTHON:
+    from ..logger.magic import fix_ipython_startup
 
 __all__ = [
     'interact',
@@ -66,12 +68,13 @@ else:
     # ROOT has a bug causing it to print (Bool_t)1 to the console.
     # This is fixed in defaults.py if rootpy is imported under the ipython
     # interpreter, but at this point that is too late, so we need to try again
-    _finalSetup = getattr(R.__class__, "_ModuleFacade__finalSetup", None)
-    if _finalSetup:
-        _orig_func = getattr(_finalSetup, "_orig_func", None)
-        if _orig_func:
-            _finalSetup = _orig_func
-        fix_ipython_startup(_finalSetup)
+    if CPYTHON:
+        _finalSetup = getattr(R.__class__, "_ModuleFacade__finalSetup", None)
+        if _finalSetup:
+            _orig_func = getattr(_finalSetup, "_orig_func", None)
+            if _orig_func:
+                _finalSetup = _orig_func
+            fix_ipython_startup(_finalSetup)
 
     interact_ipython_ = None
 
