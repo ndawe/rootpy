@@ -50,7 +50,11 @@ from . import log; log = log[__name__]
 
 __all__ = []
 
-STL = QROOT.std.stlclasses
+# ROOT.std.stlclasses
+STL = (
+    'complex', 'pair', 'deque', 'list', 'queue', 'stack',
+    'vector', 'map', 'multimap', 'set', 'multiset',
+)
 
 HAS_ITERATORS = [
     'map',
