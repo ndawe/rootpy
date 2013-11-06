@@ -75,9 +75,9 @@ test-doc:
 
 test-coverage:
 	@rm -rf coverage .coverage
-	@$(NOSETESTS) -v -a '!slow' -s --with-coverage --cover-html \
-	--cover-html-dir=coverage \
-	--cover-package=rootpy rootpy
+	@$(NOSETESTS) -v -a '!slow' -s --with-coverage \
+		--cover-erase --cover-branches \
+		--cover-html --cover-html-dir=coverage rootpy
 	@xdg-open coverage/index.html
 
 test-examples: clean-examples
