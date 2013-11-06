@@ -75,8 +75,10 @@ test-doc:
 
 test-coverage:
 	@rm -rf coverage .coverage
-	@$(NOSETESTS) -s --with-coverage --cover-html --cover-html-dir=coverage \
+	@$(NOSETESTS) -v -a '!slow' -s --with-coverage --cover-html \
+	--cover-html-dir=coverage \
 	--cover-package=rootpy rootpy
+	@xdg-open coverage/index.html
 
 test-examples: clean-examples
 	@PYTHONPATH=$(PWD):$(PYTHONPATH); \
