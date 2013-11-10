@@ -1,7 +1,7 @@
 # simple makefile to simplify repetitive build env management tasks under posix
 
 PYTHON := $(shell which python)
-NOSETESTS ?= nosetests
+NOSETESTS := $(shell which nosetests)
 
 all: clean inplace test
 
@@ -75,7 +75,7 @@ test-doc:
 
 test-coverage:
 	@rm -rf coverage .coverage
-	@$(NOSETESTS) -v -a '!slow' -s --with-coverage \
+	@$(NOSETESTS) -s -v -a '!slow' --with-coverage \
 		--cover-erase --cover-branches \
 		--cover-html --cover-html-dir=coverage rootpy
 	@xdg-open coverage/index.html
