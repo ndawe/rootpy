@@ -15,6 +15,7 @@ from .profile import Profile, Profile1D, Profile2D, Profile3D
 from .func import F1, F2, F3
 from .legend import Legend
 from .canvas import Canvas, Pad
+from .text import Latex
 from .style import Style, get_style, set_style
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     'Profile', 'Profile1D', 'Profile2D', 'Profile3D',
     'F1', 'F2', 'F3',
     'Legend', 'Canvas', 'Pad',
+    'Latex',
     'Style', 'get_style', 'set_style',
 ]
 

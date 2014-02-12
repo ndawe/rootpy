@@ -122,6 +122,7 @@ INIT_REGISTRY = {
     'TPave': 'plotting.box.Pave',
     'TPaveStats': 'plotting.box.PaveStats',
     'TLegend': 'plotting.legend.Legend',
+    'TLatex': 'plotting.text.Latex',
     'TEllipse': 'plotting.shapes.Ellipse',
     'TLine': 'plotting.shapes.Line',
 

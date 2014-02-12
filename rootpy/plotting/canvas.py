@@ -21,7 +21,66 @@ __all__ = [
 ]
 
 
-class _PadBase(NamedObject):
+class PadAttributes(object):
+
+    ATTRS = {
+        'leftmargin': None,
+        'rightmargin': None,
+        'bottommargin': None,
+        'topmargin': None,
+        'margin': None,
+        }
+
+    @property
+    def leftmargin(self):
+        return self.GetLeftMargin()
+
+    @leftmargin.setter
+    def leftmargin(self, value):
+        self.SetLeftMargin(value)
+
+    @property
+    def rightmargin(self):
+        return self.GetRightMargin()
+
+    @leftmargin.setter
+    def rightmargin(self, value):
+        self.SetRightMargin(value)
+
+    @property
+    def topmargin(self):
+        return self.GetTopMargin()
+
+    @topmargin.setter
+    def topmargin(self, value):
+        self.SetTopMargin(value)
+
+    @property
+    def bottommargin(self):
+        return self.GetBottomMargin()
+
+    @bottommargin.setter
+    def bottommargin(self, value):
+        self.SetBottomMargin(value)
+
+    @property
+    def margin(self):
+        return (self.GetLeftMargin(), self.GetRightMargin(),
+                self.GetBottomMargin(), self.GetTopMargin())
+
+    @margin.setter
+    def margin(self, value):
+        left, right, bottom, top = value
+        self.SetMargin(left, right, bottom, top)
+
+    def decorate(self, **kwargs):
+        for key, value in kwargs.items():
+            if key not in self.ATTRS:
+                raise AttributeError("unknown attribute `{0}`".format(key))
+            setattr(self, key, value)
+
+
+class _PadBase(PadAttributes, NamedObject):
 
     def cd(self, *args):
         pad = asrootpy(super(_PadBase, self).cd(*args))
@@ -34,7 +93,6 @@ class _PadBase(NamedObject):
         return asrootpy(self.GetListOfPrimitives())
 
     def __enter__(self):
-
         self._prev_pad = ROOT.gPad.func()
         self.cd()
         return self
@@ -55,7 +113,6 @@ class _PadBase(NamedObject):
 
 @snake_case_methods
 class Pad(_PadBase, QROOT.TPad):
-
     _ROOT = QROOT.TPad
 
     def __init__(self, xlow, ylow, xup, yup,
@@ -63,27 +120,26 @@ class Pad(_PadBase, QROOT.TPad):
                  bordersize=-1,
                  bordermode=-2,
                  name=None,
-                 title=None):
-
+                 title=None,
+                 **kwargs):
         color = convert_color(color, 'root')
-
         super(Pad, self).__init__(xlow, ylow, xup, yup,
                                   color, bordersize, bordermode,
                                   name=name,
                                   title=title)
+        self.decorate(**kwargs)
 
 
 @snake_case_methods
 class Canvas(_PadBase, QROOT.TCanvas):
-
     _ROOT = QROOT.TCanvas
 
     def __init__(self,
                  width=None, height=None,
                  x=None, y=None,
                  name=None, title=None,
-                 size_includes_decorations=False):
-
+                 size_includes_decorations=False,
+                 **kwargs):
         # The following line will trigger finalSetup and start the graphics
         # thread if not started already
         style = ROOT.gStyle
@@ -110,3 +166,4 @@ class Canvas(_PadBase, QROOT.TCanvas):
             else:
                 self.SetWindowSize(width + (width - self.GetWw()),
                                    height + (height - self.GetWh()))
+        self.decorate(**kwargs)

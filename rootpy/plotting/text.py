@@ -3,10 +3,27 @@
 from __future__ import absolute_import
 
 from .base import _StyleContainer
+from .. import QROOT
 
 __all__ = [
+    'Latex',
     'Font',
 ]
+
+alignment_root2text = {
+    11: 'left bottom',
+    12: 'left center',
+    13: 'left top',
+    21: 'center bottom',
+    22: 'center center',
+    23: 'center top',
+    31: 'right bottom',
+    32: 'right center',
+    33: 'right top',
+    }
+
+alignment_text2root = dict([
+    (value, key) for key, value in alignment_root2text.items()])
 
 fonts_root2text = {
     1: 'times-medium-i-normal',
@@ -28,6 +45,22 @@ fonts_root2text = {
 
 fonts_text2root = dict([
     (value, key) for key, value in fonts_root2text.items()])
+
+
+class TextAttributes(object):
+
+   pass
+
+
+
+class Latex(TextAttributes, QROOT.TLatex):
+    _ROOT = QROOT.TLatex
+
+    def __init__(self, x, y, text, coord='DATA', **kwargs):
+        super(Latex, self).__init__(x, y, text)
+        if coord.upper() == 'NDC':
+            self.SetNDC()
+        # set text attributes with **kwargs
 
 
 class Font(_StyleContainer):
