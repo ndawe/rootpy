@@ -8,6 +8,7 @@ from ..context import preserve_current_style
 from .canvas import Canvas, Pad
 from .hist import Hist
 from .utils import draw, tick_length_pixels
+from .shapes import Line
 
 
 __all__ = [
@@ -20,6 +21,9 @@ class RatioPlot(Canvas):
     def __init__(self, width=None, height=None,
                  ratio_height=0.2, ratio_margin=0.05,
                  ratio_range=(0, 2), ratio_divisions=4,
+                 ratio_line_values=(1,),
+                 ratio_line_width=2,
+                 ratio_line_style='dashed',
                  xtitle=None, ytitle=None, ratio_title=None,
                  tick_length=20):
 
@@ -112,6 +116,18 @@ class RatioPlot(Canvas):
         tick_length_pixels(ratio, ratio_hist.xaxis, ratio_hist.yaxis,
                            tick_length)
 
+        # draw ratio lines
+        lines = []
+        if ratio_line_values:
+            with ratio:
+                for value in ratio_line_values:
+                    line = Line(0, value, 1, value)
+                    line.linestyle = ratio_line_style
+                    line.linewidth = ratio_line_width
+                    line.Draw()
+                    lines.append(line)
+        self.lines = lines
+
         self.main = main
         self.main_hist = main_hist
         self.ratio = ratio
@@ -144,3 +160,8 @@ class RatioPlot(Canvas):
         if region == 'ratio' and self.ratio_range is not None:
             y = None
         draw(objects, pad=pad, xaxis=x, yaxis=y, same=True, **kwargs)
+        if region == 'ratio':
+            # update ratio line lengths
+            for line in self.lines:
+                line.SetX1(x.GetXmin())
+                line.SetX2(x.GetXmax())
