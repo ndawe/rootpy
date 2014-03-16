@@ -7,7 +7,7 @@ import ROOT
 from ..context import preserve_current_style
 from .canvas import Canvas, Pad
 from .hist import Hist
-from .utils import draw
+from .utils import draw, tick_length_pixels
 
 
 __all__ = [
@@ -20,7 +20,8 @@ class RatioPlot(Canvas):
     def __init__(self, width=None, height=None,
                  ratio_height=0.2, ratio_margin=0.05,
                  ratio_range=(0, 2), ratio_divisions=4,
-                 xtitle=None, ytitle=None, ratio_title=None):
+                 xtitle=None, ytitle=None, ratio_title=None,
+                 tick_length=20):
 
         style = ROOT.gStyle
 
@@ -104,6 +105,12 @@ class RatioPlot(Canvas):
             main_hist.yaxis.title = ytitle
         if ratio_title is not None:
             ratio_hist.yaxis.title = ratio_title
+
+        # set the tick lengths
+        tick_length_pixels(main, main_hist.xaxis, main_hist.yaxis,
+                           tick_length)
+        tick_length_pixels(ratio, ratio_hist.xaxis, ratio_hist.yaxis,
+                           tick_length)
 
         self.main = main
         self.main_hist = main_hist
