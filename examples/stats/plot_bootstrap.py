@@ -48,8 +48,8 @@ hist = Hist2D(10, -3, 3, 10, -3, 3, drawstyle='LEGO2')
 
 output = root_open('bootstrap.root', 'recreate')
 
-# bootstrap 100 times
-for bootstrap_idx in range(100):
+# bootstrap 20 times
+for bootstrap_idx in range(20):
     sys.stdout.write("bootstrap {0} ...\r".format(bootstrap_idx))
     sys.stdout.flush()
     # resample with replacement

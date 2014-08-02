@@ -60,7 +60,7 @@ stack = HistStack([h1, h2], drawstyle='HIST E1 X0')
 canvas = Canvas(width=700, height=500)
 draw([stack, h3], xtitle='Mass', ytitle='Events', pad=canvas)
 # set the number of expected legend entries
-legend = Legend([h1, h2, h3], leftmargin=0.45, margin=0.3)
+legend = Legend([h1, h2, h3])
 legend.Draw()
 label = ROOT.TText(0.3, 0.8, 'ROOT')
 label.SetTextFont(43)

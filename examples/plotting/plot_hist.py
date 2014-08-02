@@ -50,10 +50,7 @@ canvas.SetRightMargin(0.05)
 h_simple.Draw()
 
 # create the legend
-legend = Legend([h_simple], pad=canvas,
-                header='Header',
-                leftmargin=0.05,
-                rightmargin=0.5)
+legend = Legend([h_simple], pad=canvas, header='Header')
 legend.Draw()
 
 # 2D and 3D histograms are handled in the same way

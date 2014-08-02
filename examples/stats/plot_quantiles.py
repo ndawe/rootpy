@@ -34,8 +34,10 @@ pad = c.cd(1)
 h1.Draw('hist')
 h2.Draw('hist same')
 
-leg = Legend([h1, h2], pad=pad, leftmargin=0.5,
-             topmargin=0.11, rightmargin=0.05,
+leg = Legend([h1, h2], pad=pad,
+             x=0.05, y=0.05,
+             anchor='upper right',
+             reference='upper right',
              textsize=20)
 leg.Draw()
 
@@ -69,8 +71,10 @@ f_dia.SetLineWidth(2)
 f_dia.SetLineStyle(2)
 f_dia.Draw("same")
 
-leg = Legend(3, pad=pad, leftmargin=0.45,
-             topmargin=0.45, rightmargin=0.05,
+leg = Legend(3, pad=pad,
+             x=0.05, y=0.05,
+             anchor='lower right',
+             reference='lower right',
              textsize=20)
 leg.AddEntry(gr, "QQ points", "p")
 leg.AddEntry(gr, "68% CL band", "f")
