@@ -118,7 +118,7 @@ setup(
     download_url=__download_url__,
     packages=find_packages(),
     extras_require={
-        'tables': reqs('tables.txt'),
+        'hdf5': reqs('hdf5.txt'),
         'array': reqs('array.txt'),
         'matplotlib': reqs('matplotlib.txt'),
         'roosh': reqs('roosh.txt'),

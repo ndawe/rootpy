@@ -1,8 +1,8 @@
 # Copyright 2012 the rootpy developers
 # distributed under the terms of the GNU General Public License
 """
-This module handles conversion of ROOT's TFile and
-contained TTrees into HDF5 format with PyTables
+This module handles conversion of ROOT's TFile and contained TTrees into HDF5
+format.
 """
 from __future__ import absolute_import
 
@@ -11,13 +11,7 @@ import sys
 import warnings
 from pkg_resources import parse_version
 
-import tables
-TABLES_NEW_API = parse_version(tables.__version__) >= parse_version('3')
-if TABLES_NEW_API:
-    tables_open = tables.open_file
-else:
-    tables_open = tables.openFile
-
+import h5py
 from root_numpy import tree2array, RootNumpyUnconvertibleWarning
 from numpy.lib import recfunctions
 
@@ -36,7 +30,7 @@ __all__ = [
 
 
 def _drop_object_col(rec, warn=True):
-    # ignore columns of type `object` since PyTables does not support these
+    # ignore columns of type `object` since these are not supported
     if rec.dtype.hasobject:
         object_fields = []
         fields = rec.dtype.fields
@@ -66,10 +60,10 @@ def tree2hdf5(tree, hfile, group=None,
     tree : ROOT.TTree
         A ROOT TTree.
 
-    hfile : string or PyTables HDF5 File
-        A PyTables HDF5 File handle or string path to an existing HDF5 file.
+    hfile : string or HDF5 File
+        A HDF5 file handle or string path to an existing HDF5 file.
 
-    group : string or PyTables Group instance, optional (default=None)
+    group : string or group instance, optional (default=None)
         Write the table at this location in the HDF5 file.
 
     entries : int, optional (default=-1)
@@ -92,7 +86,7 @@ def tree2hdf5(tree, hfile, group=None,
 
     own_h5file = False
     if isinstance(hfile, string_types):
-        hfile = tables_open(filename=hfile, mode="w", title="Data")
+        hfile = h5py.File(hfile, 'w')
         own_h5file = True
 
     log.info("Converting tree '{0}' with {1:d} entries ...".format(
@@ -100,15 +94,9 @@ def tree2hdf5(tree, hfile, group=None,
         tree.GetEntries()))
 
     if not group:
-        group = hfile.root
+        group = hfile
     elif isinstance(group, string_types):
-        group_where = '/' + os.path.dirname(group)
-        group_name = os.path.basename(group)
-        if TABLES_NEW_API:
-            group = hfile.create_group(group_where, group_name,
-                                       createparents=True)
-        else:
-            group = hfile.createGroup(group_where, group_name)
+        group = hfile.create_group(group)
 
     if tree.GetName() in group:
         log.warning(
@@ -127,16 +115,9 @@ def tree2hdf5(tree, hfile, group=None,
             pbar.start()
         array = tree2array(tree, selection=selection)
         array = _drop_object_col(array)
-        if TABLES_NEW_API:
-            table = hfile.create_table(
-                group, tree.GetName(),
-                array, tree.GetTitle())
-        else:
-            table = hfile.createTable(
-                group, tree.GetName(),
-                array, tree.GetTitle())
-        # flush data in the table
-        table.flush()
+        dset = group.create_dataset(
+            tree.GetName(), array,
+            maxshape=[None,] + list(array.shape)[1:])
         # flush all pending data
         hfile.flush()
     else:
@@ -148,16 +129,14 @@ def tree2hdf5(tree, hfile, group=None,
                     warnings.simplefilter(
                         "ignore",
                         RootNumpyUnconvertibleWarning)
-                    warnings.simplefilter(
-                        "ignore",
-                        tables.NaturalNameWarning)
                     array = tree2array(
                         tree,
                         selection=selection,
                         start=start,
                         stop=start + entries)
                 array = _drop_object_col(array, warn=False)
-                table.append(array)
+                prev_size = dset.shape[0]
+                dset.resize(prev_size + array.shape[0], axis=0)
             else:
                 array = tree2array(
                     tree,
@@ -168,19 +147,14 @@ def tree2hdf5(tree, hfile, group=None,
                 if pbar is not None:
                     # start after any output from root_numpy
                     pbar.start()
-                if TABLES_NEW_API:
-                    table = hfile.create_table(
-                        group, tree.GetName(),
-                        array, tree.GetTitle())
-                else:
-                    table = hfile.createTable(
-                        group, tree.GetName(),
-                        array, tree.GetTitle())
+                dset = group.create_dataset(
+                    tree.GetName(), array.shape, dtype=array.dtype,
+                    maxshape=[None,] + list(array.shape)[1:])
+                prev_size = 0
+            dset[prev_size:] = array
             start += entries
             if start <= total_entries and pbar is not None:
                 pbar.update(start)
-            # flush data in the table
-            table.flush()
             # flush all pending data
             hfile.flush()
 
@@ -197,7 +171,7 @@ def root2hdf5(rfile, hfile, rpath='',
               show_progress=False,
               ignore_exception=False):
     """
-    Convert all trees in a ROOT file into tables in an HDF5 file.
+    Convert all trees in a ROOT file into HDF5 format.
 
     Parameters
     ----------
@@ -205,8 +179,8 @@ def root2hdf5(rfile, hfile, rpath='',
     rfile : string or asrootpy'd ROOT File
         A ROOT File handle or string path to an existing ROOT file.
 
-    hfile : string or PyTables HDF5 File
-        A PyTables HDF5 File handle or string path to an existing HDF5 file.
+    hfile : string or an HDF5 File
+        An h5py HDF5 File handle or string path to an existing HDF5 file.
 
     rpath : string, optional (default='')
         Top level path to begin traversal through the ROOT file. By default
@@ -242,7 +216,7 @@ def root2hdf5(rfile, hfile, rpath='',
 
     own_h5file = False
     if isinstance(hfile, string_types):
-        hfile = tables_open(filename=hfile, mode="w", title="Data")
+        hfile = h5py.File(hfile, 'w')
         own_h5file = True
 
     for dirpath, dirnames, treenames in rfile.walk(
@@ -258,12 +232,9 @@ def root2hdf5(rfile, hfile, rpath='',
         group_name = os.path.basename(dirpath)
 
         if not group_name:
-            group = hfile.root
-        elif TABLES_NEW_API:
-            group = hfile.create_group(group_where, group_name,
-                                       createparents=True)
+            group = hfile
         else:
-            group = hfile.createGroup(group_where, group_name)
+            group = hfile.create_group(group_path)
 
         ntrees = len(treenames)
         log.info(
@@ -272,7 +243,6 @@ def root2hdf5(rfile, hfile, rpath='',
                 os.path.join(group_where, group_name)))
 
         for treename in treenames:
-
             input_tree = rfile.Get(os.path.join(dirpath, treename))
 
             if userfunc is not None:
@@ -326,8 +296,7 @@ def main():
         pass
 
     parser = ArgumentParser(formatter_class=formatter_class,
-        description="Convert ROOT files containing TTrees into HDF5 files "
-                    "containing HDF5 tables")
+        description="Convert ROOT files containing TTrees into HDF5 files")
     parser.add_argument('--version', action='version',
                         version=rootpy.__version__,
                         help="show the version number and exit")
@@ -342,8 +311,8 @@ def main():
     parser.add_argument('-c', '--complevel', type=int, default=5,
                         choices=range(0, 10),
                         help="compression level")
-    parser.add_argument('-l', '--complib', default='zlib',
-                        choices=('zlib', 'lzo', 'bzip2', 'blosc'),
+    parser.add_argument('-l', '--complib', default='none',
+                        choices=('none', 'gzip', 'lzf', 'szip'),
                         help="compression algorithm")
     parser.add_argument('-s', '--selection', default=None,
                         help="apply a selection on each "
@@ -383,9 +352,6 @@ def main():
         warnings.simplefilter(
             "ignore",
             RootNumpyUnconvertibleWarning)
-        warnings.simplefilter(
-            "ignore",
-            tables.NaturalNameWarning)
 
     userfunc = None
     if args.script is not None:
@@ -420,9 +386,7 @@ def main():
                                          complevel=args.complevel)
             else:
                 filters = None
-            hd5file = tables_open(filename=outputname,
-                                  mode='a' if args.update else 'w',
-                                  title='Data', filters=filters)
+            hd5file = h5py.File(outputname, 'a' if args.update else 'w')
         except IOError:
             sys.exit("Could not create {0}".format(outputname))
         try:
