@@ -50,7 +50,8 @@ def _drop_object_col(rec, warn=True):
 
 def tree2hdf5(tree, hfile, group=None,
               entries=-1, selection=None,
-              show_progress=False):
+              show_progress=False,
+              **kwargs):
     """
     Convert a TTree into a HDF5 table.
 
@@ -78,6 +79,10 @@ def tree2hdf5(tree, hfile, group=None,
     show_progress : bool, optional (default=False)
         If True, then display and update a progress bar on stdout as the TTree
         is converted.
+
+    kwargs : dict, optional
+        Additional keyword arguments passed to the Group.create_dataset()
+        method.
 
     """
     show_progress = show_progress and check_tty(sys.stdout)
@@ -117,7 +122,8 @@ def tree2hdf5(tree, hfile, group=None,
         array = _drop_object_col(array)
         dset = group.create_dataset(
             tree.GetName(), array,
-            maxshape=[None,] + list(array.shape)[1:])
+            maxshape=[None,] + list(array.shape)[1:],
+            **kwargs)
         # flush all pending data
         hfile.flush()
     else:
@@ -149,7 +155,8 @@ def tree2hdf5(tree, hfile, group=None,
                     pbar.start()
                 dset = group.create_dataset(
                     tree.GetName(), array.shape, dtype=array.dtype,
-                    maxshape=[None,] + list(array.shape)[1:])
+                    maxshape=[None,] + list(array.shape)[1:],
+                    **kwargs)
                 prev_size = 0
             dset[prev_size:] = array
             start += entries
@@ -169,7 +176,8 @@ def root2hdf5(rfile, hfile, rpath='',
               entries=-1, userfunc=None,
               selection=None,
               show_progress=False,
-              ignore_exception=False):
+              ignore_exception=False,
+              **kwargs):
     """
     Convert all trees in a ROOT file into HDF5 format.
 
@@ -208,6 +216,10 @@ def root2hdf5(rfile, hfile, rpath='',
         If True, then ignore exceptions raised in converting trees and instead
         skip such trees.
 
+    kwargs : dict, optional
+        Additional keyword arguments passed to the Group.create_dataset()
+        method.
+
     """
     own_rootfile = False
     if isinstance(rfile, string_types):
@@ -228,10 +240,8 @@ def root2hdf5(rfile, hfile, rpath='',
 
         treenames.sort()
 
-        group_where = '/' + os.path.dirname(dirpath)
-        group_name = os.path.basename(dirpath)
-
-        if not group_name:
+        group_path = '/' + dirpath
+        if group_path == '/':
             group = hfile
         else:
             group = hfile.create_group(group_path)
@@ -240,7 +250,7 @@ def root2hdf5(rfile, hfile, rpath='',
         log.info(
             "Will convert {0:d} tree{1} in {2}".format(
                 ntrees, 's' if ntrees != 1 else '',
-                os.path.join(group_where, group_name)))
+                group_path))
 
         for treename in treenames:
             input_tree = rfile.Get(os.path.join(dirpath, treename))
@@ -263,7 +273,8 @@ def root2hdf5(rfile, hfile, rpath='',
                 try:
                     tree2hdf5(tree, hfile, group=group,
                               entries=entries, selection=selection,
-                              show_progress=show_progress)
+                              show_progress=show_progress,
+                              **kwargs)
                 except Exception as e:
                     if ignore_exception:
                         log.error("Failed to convert tree '{0}': {1}".format(
@@ -311,7 +322,7 @@ def main():
     parser.add_argument('-c', '--complevel', type=int, default=5,
                         choices=range(0, 10),
                         help="compression level")
-    parser.add_argument('-l', '--complib', default='none',
+    parser.add_argument('-l', '--complib', default=None,
                         choices=('none', 'gzip', 'lzf', 'szip'),
                         help="compression algorithm")
     parser.add_argument('-s', '--selection', default=None,
@@ -369,6 +380,12 @@ def main():
                 "Could not find the function '{0}' in the script {1}".format(
                     funcname, args.script))
 
+    kwargs = {}
+    if args.complib:
+        kwargs['compression'] = args.complib
+        if args.complib == 'gzip':
+            kwargs['compression_opts'] = args.complevel
+
     for inputname in args.files:
         outputname = os.path.splitext(inputname)[0] + '.' + args.ext
         output_exists = os.path.exists(outputname)
@@ -381,11 +398,6 @@ def main():
         except IOError:
             sys.exit("Could not open {0}".format(inputname))
         try:
-            if args.complevel > 0:
-                filters = tables.Filters(complib=args.complib,
-                                         complevel=args.complevel)
-            else:
-                filters = None
             hd5file = h5py.File(outputname, 'a' if args.update else 'w')
         except IOError:
             sys.exit("Could not create {0}".format(outputname))
@@ -396,7 +408,8 @@ def main():
                       userfunc=userfunc,
                       selection=args.selection,
                       show_progress=not args.no_progress_bar,
-                      ignore_exception=args.ignore_exception)
+                      ignore_exception=args.ignore_exception,
+                      **kwargs)
             log.info("{0} {1}".format(
                 "Updated" if output_exists and args.update else "Created",
                 outputname))
