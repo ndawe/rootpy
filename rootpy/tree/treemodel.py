@@ -13,12 +13,24 @@ else:
 import ROOT
 
 from .. import log; log = log[__name__]
+from .. import compiled as C
 from .treetypes import Column
 from .treebuffer import TreeBuffer
 
 __all__ = [
     'TreeModel',
 ]
+
+model_cpp_template = """
+#include <TObject.h>
+{includes}
+class {name}: public TObject {{
+public:
+{name}(){defaults}{{}}
+{members}
+ClassDef({name}, 1)
+}};
+"""
 
 
 class TreeModelMeta(type):
@@ -121,24 +133,24 @@ class TreeModelMeta(type):
         attrs.sort(key=lambda attr: (getattr(attr[1], 'idx', -1), attr[0]))
         return attrs
 
-    def to_struct(cls, name=None):
-        """
-        Convert the TreeModel into a compiled C struct
-        """
+    def cpp(cls, name=None):
         if name is None:
             name = cls.__name__
         basic_attrs = dict([(attr_name, value)
                             for attr_name, value in cls.get_attrs()
                             if isinstance(value, Column)])
-        if not basic_attrs:
-            return None
-        src = 'struct {0} {{'.format(name)
+        members = ''
+        defaults = ''
+        includes = ''
         for attr_name, value in basic_attrs.items():
-            src += '{0} {1};'.format(value.type.typename, attr_name)
-        src += '};'
-        if ROOT.gROOT.ProcessLine(src) != 0:
-            return None
-        return getattr(ROOT, name, None)
+            members += '{0} {1};\n'.format(value.type.typename, attr_name)
+            if 'default' in value.kwargs:
+                defaults += '{name}({value}),'.format(
+                    name=attr_name, value=value.kwargs['default'])
+        if defaults:
+            defaults = ':' + defaults[:-1]
+        return model_cpp_template.format(name=name, members=members[:-1],
+                                         defaults=defaults, includes=includes)
 
     def __repr__(cls):
         out = StringIO()
@@ -151,15 +163,13 @@ class TreeModelMeta(type):
 
 
 # TreeModel.__new__
-def __new__(cls):
+def __new__(cls, name=None):
     """
     Return a TreeBuffer for this TreeModel
     """
-    treebuffer = TreeBuffer()
-    for name, attr in cls.get_attrs():
-        treebuffer[name] = attr()
-    return treebuffer
-
+    name = name or cls.__name__
+    C.register_code(cls.cpp(name=name), [name])
+    return getattr(C, name)
 
 # metaclass syntax compatible with both Python 2 and Python 3
 TreeModel = TreeModelMeta('TreeModel', (object,), {'__new__': __new__})

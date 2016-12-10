@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 import sys
 import re
 import fnmatch
+import inspect
 
 try:
     from collections import OrderedDict
@@ -889,7 +890,10 @@ class Tree(BaseTree, QROOT.TTree):
         if model is not None:
             if not issubclass(model, TreeModel):
                 raise TypeError("the model must subclass TreeModel")
-            self.set_buffer(model(), create_branches=True)
+            treebuffer = TreeBuffer()
+            for name, attr in model.get_attrs():
+                treebuffer[name] = attr()
+            self.set_buffer(treebuffer, create_branches=True)
         self._post_init()
 
     def Fill(self, reset=False):

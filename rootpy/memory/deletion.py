@@ -61,41 +61,40 @@ cleanuplog.show_stack()
 C.add_python_includepath()
 
 C.register_code("""
-    #ifndef __CINT__
-    #include <Python.h>
-    #endif
-    #include <TObject.h>
-    #include <TPython.h>
+#ifndef __CINT__
+#include <Python.h>
+#endif
+#include <TObject.h>
+#include <TPython.h>
 
-    class RootpyObjectCleanup : public TObject {
-    public:
-        typedef void (*CleanupCallback)(PyObject*);
-        CleanupCallback _callback;
+class RootpyObjectCleanup : public TObject {
+public:
+    typedef void (*CleanupCallback)(PyObject*);
+    CleanupCallback _callback;
 
-        RootpyObjectCleanup(CleanupCallback callback) : _callback(callback) {}
+    RootpyObjectCleanup(CleanupCallback callback) : _callback(callback) {}
 
-        virtual void RecursiveRemove(TObject* object) {
-            // When arriving here, object->ClassName() will _always_ be TObject
-            // since we're called by ~TObject, and virtual method calls don't
-            // work as expected from there.
-            PyObject* o = TPython::ObjectProxy_FromVoidPtr(object, "TObject");
+    virtual void RecursiveRemove(TObject* object) {
+        // When arriving here, object->ClassName() will _always_ be TObject
+        // since we're called by ~TObject, and virtual method calls don't
+        // work as expected from there.
+        PyObject* o = TPython::ObjectProxy_FromVoidPtr(object, "TObject");
 
-            PyGILState_STATE gstate;
-            gstate = PyGILState_Ensure();
-            PyObject *ptype, *pvalue, *ptraceback;
-            PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
+        PyObject *ptype, *pvalue, *ptraceback;
+        PyErr_Fetch(&ptype, &pvalue, &ptraceback);
 
-            _callback(o);
+        _callback(o);
 
-            PyErr_Restore(ptype, pvalue, ptraceback);
-            PyGILState_Release(gstate);
-        }
+        PyErr_Restore(ptype, pvalue, ptraceback);
+        PyGILState_Release(gstate);
+    }
 
-        ClassDef(RootpyObjectCleanup, 0);
-    };
+    ClassDef(RootpyObjectCleanup, 0);
+};
 
-    ClassImp(RootpyObjectCleanup);
-
+ClassImp(RootpyObjectCleanup);
 """, ["RootpyObjectCleanup"])
 
 MONITORED = {}
@@ -120,9 +119,7 @@ def init():
     global initialized
     if initialized: return
     initialized = True
-
     cleanup = C.RootpyObjectCleanup(callback(on_cleanup))
-
     cleanups = QROOT.gROOT.GetListOfCleanups()
     cleanups.Add(cleanup)
 
@@ -135,11 +132,8 @@ def init():
 
 
 def monitor_object_deletion(o, fn=lambda *args: None):
-
     init()
-
     # Required so that GetListOfCleanups().RecursiveRemove() is called.
     o.SetBit(o.kMustCleanup)
-
     args = fn, type(o).__name__, o.GetName(), o.GetTitle(), repr(o)
     MONITORED[objectproxy_realaddress(o)] = args
