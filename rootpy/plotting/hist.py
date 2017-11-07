@@ -40,7 +40,7 @@ def canonify_slice(s, n):
     to simplify treatment in histogram bin content
     and edge slicing.
     """
-    if isinstance(s, (int, long)):
+    if isinstance(s, int):
         return canonify_slice(slice(s, s + 1, None), n)
     start = s.start % n if s.start is not None else 0
     stop = s.stop % n if s.stop is not None else n
